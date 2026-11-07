@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senhaHash String   @map("senha_hash")
+  cargo     String   @default("OPERADOR")
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id            Int      @id @default(autoincrement())
+  razaoSocial   String   @map("razao_social")
+  cnpj          String   @unique
+  email         String   @unique
+  telefone      String
+  limiteCredito Decimal  @map("limite_credito") @db.Decimal(10, 2)
+  ativo         Boolean  @default(true)
+  pedidos       Pedido[]
+
+  @@map("clientes")
+}
+
+model Fornecedor {
+  id           Int       @id @default(autoincrement())
+  nomeFantasia String    @map("nome_fantasia")
+  cnpj         String    @unique
+  emailContato String    @map("email_contato")
+  prazoEntrega Int       @map("prazo_entrega_dias")
+  ativo        Boolean   @default(true)
+  produtos     Produto[]
+
+  @@map("fornecedores")
+}
+
+model Produto {
+  id            Int          @id @default(autoincrement())
+  sku           String       @unique
+  nome          String
+  precoCusto    Decimal      @map("preco_custo") @db.Decimal(10, 2)
+  precoVenda    Decimal      @map("preco_venda") @db.Decimal(10, 2)
+  estoqueAtual  Int          @default(0) @map("estoque_atual")
+  estoqueMinimo Int          @default(10) @map("estoque_minimo")
+  fornecedorId  Int          @map("fornecedor_id")
+  fornecedor    Fornecedor   @relation(fields: [fornecedorId], references: [id])
+  itensPedido   ItemPedido[]
+
+  @@map("produtos")
+}
+
+model Pedido {
+  id            Int          @id @default(autoincrement())
+  clienteId     Int          @map("cliente_id")
+  status        String       @default("APROVADO")
+  valorBruto    Decimal      @map("valor_bruto") @db.Decimal(10, 2)
+  valorDesconto Decimal      @map("valor_desconto") @db.Decimal(10, 2)
+  valorLiquido  Decimal      @map("valor_liquido") @db.Decimal(10, 2)
+  criadoEm      DateTime     @default(now()) @map("criado_em")
+  cliente       Cliente      @relation(fields: [clienteId], references: [id])
+  itensPedido   ItemPedido[]
+
+  @@map("pedidos")
+}
+
+model ItemPedido {
+  id            Int     @id @default(autoincrement())
+  pedidoId      Int     @map("pedido_id")
+  produtoId     Int     @map("produto_id")
+  quantidade    Int
+  precoUnitario Decimal @map("preco_unitario") @db.Decimal(10, 2)
+  subtotal      Decimal @db.Decimal(10, 2)
+  pedido        Pedido  @relation(fields: [pedidoId], references: [id])
+  produto       Produto @relation(fields: [produtoId], references: [id])
+
+  @@map("itens_pedido")
+}
