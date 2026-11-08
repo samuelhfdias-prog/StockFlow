@@ -7,6 +7,7 @@ import { criarPedidoSchema } from '../schemas/pedido.schema';
 const pedidoRoutes = Router();
 const pedidoController = new PedidoController();
 
+pedidoRoutes.get('/', ensureAuthenticated, pedidoController.listar);
 pedidoRoutes.get('/:id', ensureAuthenticated, pedidoController.buscarPorId);
 pedidoRoutes.patch('/:id/cancelar', ensureAuthenticated, pedidoController.cancelarPedido);
 pedidoRoutes.post('/', ensureAuthenticated, validateBody(criarPedidoSchema), pedidoController.criarPedido);

@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const tsNodeDev = resolve(projectRoot, 'node_modules', 'ts-node-dev', 'lib', 'bin.js');
+const tsx = resolve(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const server = spawn(
   process.execPath,
-  [tsNodeDev, '--respawn', '--transpile-only', 'src/server.ts'],
+  [tsx, 'watch', 'src/server.ts'],
   {
     cwd: projectRoot,
     env: { ...process.env, OPEN_SWAGGER: process.env.OPEN_SWAGGER ?? 'true' },

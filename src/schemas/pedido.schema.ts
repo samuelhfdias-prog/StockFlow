@@ -17,3 +17,14 @@ export const criarPedidoSchema = z.object({
 }).strict();
 
 export type CriarPedidoInput = z.infer<typeof criarPedidoSchema>;
+
+export const listarPedidosQuerySchema = z.object({
+  status: z.enum(['APROVADO', 'CANCELADO']).optional(),
+  clienteId: z.string()
+    .regex(/^[1-9]\d*$/, 'O ID do cliente deve ser um inteiro positivo.')
+    .transform(Number)
+    .refine(Number.isSafeInteger, 'O ID do cliente excede o limite permitido.')
+    .optional(),
+}).strict();
+
+export type ListarPedidosFiltros = z.infer<typeof listarPedidosQuerySchema>;

@@ -1,30 +1,27 @@
 ---
-description: "Guidelines for writing Node.js and JavaScript code with Vitest testing"
+description: "Padrões de Node.js, TypeScript e JavaScript do StockFlow com Vitest"
 applyTo: "**/*.{ts,js}"
 ---
 
-# Code Generation Guidelines
+# Diretrizes de Código
 
-## Coding standards
-- Use JavaScript with ES2022 features and Node.js (20+) ESM modules
-- Use Node.js built-in modules and avoid external dependencies where possible
-- Ask the user if you require any additional dependencies before adding them
-- Always use async/await for asynchronous code, and use 'node:util' promisify function to avoid callbacks
-- Keep the code simple and maintainable
-- Use descriptive variable and function names
-- Do not add comments unless absolutely necessary, the code should be self-explanatory
-- Never use `null`, always use `undefined` for optional values
-- Prefer functions over classes
+## Padrões de implementação
+- Use TypeScript e JavaScript conforme a configuração e os padrões existentes do projeto.
+- Escreva nomes de classes, funções, variáveis, tipos e mensagens em português claro, seguindo o vocabulário já adotado no código.
+- Preserve as camadas e convenções atuais; classes, services e controllers são adequados quando correspondem à arquitetura do repositório.
+- Prefira módulos nativos do Node.js e evite dependências externas desnecessárias.
+- Use async/await para código assíncrono e APIs baseadas em Promise.
+- Mantenha o código simples, tipado e fácil de manter.
+- Adicione comentários somente para explicar regras não triviais.
+- Para valores opcionais, siga os tipos e padrões já adotados pelo código existente.
 
-## Testing
-- Use Vitest for testing
-- Write tests for all new features and bug fixes
-- Ensure tests cover edge cases and error handling
-- NEVER change the original code to make it easier to test, instead, write tests that cover the original code as it is
+## Testes
+- Use Vitest quando configurado no projeto.
+- Escreva testes para novas funcionalidades e correções, cobrindo casos de borda e falhas.
+- Não altere regras de produção apenas para facilitar testes; use dependências substituíveis e mocks quando apropriado.
 
-## Documentation
-- When adding new features or making significant changes, update the README.md file where necessary
+## Documentação
+- Atualize o README.md quando adicionar funcionalidades ou fizer mudanças relevantes.
 
-## User interactions
-- Ask questions if you are unsure about the implementation details, design choices, or need clarification on the requirements
-- Always answer in the same language as the question, but use english for the generated content like code, comments or docs
+## Idioma
+- Escreva código, comentários, mensagens e documentação em português, respeitando o idioma e o domínio do projeto.

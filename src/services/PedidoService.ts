@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client';
 import { prisma } from '../database/prisma';
 import { AppError } from '../errors/AppError';
 import { PedidoRepository } from '../repositories/PedidoRepository';
-import type { CriarPedidoInput } from '../schemas/pedido.schema';
+import { listarPedidosQuerySchema, type CriarPedidoInput } from '../schemas/pedido.schema';
 
 type AlertaReposicao = {
   sku: string;
@@ -16,7 +16,7 @@ type AlertaReposicao = {
 export class PedidoService {
   constructor(
     private readonly prismaClient: PrismaClient = prisma,
-    private readonly pedidoRepository: Pick<PedidoRepository, 'findByIdWithClienteAndItens'> = new PedidoRepository(),
+    private readonly pedidoRepository: Pick<PedidoRepository, 'findByIdWithClienteAndItens' | 'findAll'> = new PedidoRepository(),
   ) {}
 
   async criarPedido(dados: CriarPedidoInput) {
@@ -195,6 +195,16 @@ export class PedidoService {
         alertasReposicao,
       };
     });
+  }
+
+  async listar(query: { status?: unknown; clienteId?: unknown }) {
+    const filtros = listarPedidosQuerySchema.safeParse(query);
+
+    if (!filtros.success) {
+      throw new AppError('Filtros de consulta de pedidos inválidos.', 400);
+    }
+
+    return this.pedidoRepository.findAll(filtros.data);
   }
 
   async buscarPorId(id: string) {
