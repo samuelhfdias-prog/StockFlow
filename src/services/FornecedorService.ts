@@ -1,13 +1,13 @@
 import { Prisma } from '../generated/prisma/client';
 import { AppError } from '../errors/AppError';
 import { FornecedorRepository } from '../repositories/FornecedorRepository';
-import type { CriarFornecedorInput } from '../schemas/fornecedor.schema';
+import type { AtualizarFornecedorInput, CriarFornecedorInput } from '../schemas/fornecedor.schema';
 
 export class FornecedorService {
   constructor(
     private readonly fornecedorRepository: Pick<
       FornecedorRepository,
-      'findByCnpj' | 'create' | 'findAll' | 'findByIdWithProdutos'
+      'findByCnpj' | 'create' | 'findAll' | 'findByIdWithProdutos' | 'findById' | 'update'
     > = new FornecedorRepository(),
   ) {}
 
@@ -47,5 +47,29 @@ export class FornecedorService {
     }
 
     return fornecedor;
+  }
+
+  async atualizar(id: string, data: AtualizarFornecedorInput) {
+    const fornecedorId = Number(id);
+
+    if (!Number.isSafeInteger(fornecedorId) || fornecedorId <= 0) {
+      throw new AppError('O ID do fornecedor deve ser um número inteiro positivo.', 400);
+    }
+
+    const fornecedor = await this.fornecedorRepository.findById(fornecedorId);
+
+    if (!fornecedor) {
+      throw new AppError('Fornecedor não encontrado.', 404);
+    }
+
+    try {
+      return await this.fornecedorRepository.update(fornecedorId, data);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new AppError('Fornecedor não encontrado.', 404);
+      }
+
+      throw error;
+    }
   }
 }

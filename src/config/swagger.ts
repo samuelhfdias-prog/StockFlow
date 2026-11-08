@@ -507,6 +507,82 @@ export const swaggerDocument = {
           },
         },
       },
+      put: {
+        tags: ['Fornecedores'],
+        summary: 'Atualizar fornecedor',
+        description: 'Atualiza os dados de contato, prazo médio de entrega e situação operacional. Requer um Bearer token válido.',
+        operationId: 'atualizarFornecedor',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AtualizarFornecedorRequest' },
+              example: {
+                emailContato: 'contato@example.com',
+                prazoEntrega: 10,
+                ativo: true,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Fornecedor atualizado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FornecedorCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID ou payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Fornecedor não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {
@@ -659,6 +735,17 @@ export const swaggerDocument = {
           },
           emailContato: { type: 'string', format: 'email', example: 'contato@example.com' },
           prazoEntrega: { type: 'integer', minimum: 1, description: 'Prazo médio em dias.', example: 7 },
+        },
+      },
+      AtualizarFornecedorRequest: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          nomeFantasia: { type: 'string', minLength: 1, example: 'Distribuidora Parceira' },
+          emailContato: { type: 'string', format: 'email', example: 'contato@example.com' },
+          prazoEntrega: { type: 'integer', minimum: 1, description: 'Prazo médio em dias.', example: 10 },
+          ativo: { type: 'boolean', example: true },
         },
       },
       FornecedorCriado: {

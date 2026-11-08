@@ -13,3 +13,15 @@ export const criarFornecedorSchema = z.object({
 }).strict();
 
 export type CriarFornecedorInput = z.infer<typeof criarFornecedorSchema>;
+
+export const atualizarFornecedorSchema = z.object({
+  nomeFantasia: z.string().trim().min(1, 'O nome fantasia é obrigatório.').optional(),
+  emailContato: z.string().trim().pipe(z.email()).transform((email) => email.toLowerCase()).optional(),
+  prazoEntrega: z.number().int().positive('O prazo de entrega deve ser um inteiro positivo em dias.').optional(),
+  ativo: z.boolean().optional(),
+}).strict().refine(
+  (dados) => Object.values(dados).some((valor) => valor !== undefined),
+  'Informe ao menos um campo para atualizar.',
+);
+
+export type AtualizarFornecedorInput = z.infer<typeof atualizarFornecedorSchema>;
