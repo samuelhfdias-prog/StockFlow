@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import type { CriarProdutoInput } from '../schemas/produto.schema';
+import type { AtualizarProdutoInput, CriarProdutoInput } from '../schemas/produto.schema';
 import { ProdutoService } from '../services/ProdutoService';
 
 export class ProdutoController {
@@ -21,5 +21,15 @@ export class ProdutoController {
   buscarPorId: RequestHandler<{ id: string }> = async (req, res) => {
     const produto = await this.produtoService.buscarPorId(req.params.id);
     res.status(200).json(produto);
+  };
+
+  atualizar: RequestHandler<{ id: string }, unknown, AtualizarProdutoInput> = async (req, res) => {
+    const produto = await this.produtoService.atualizar(req.params.id, req.body);
+    res.status(200).json(produto);
+  };
+
+  remover: RequestHandler<{ id: string }> = async (req, res) => {
+    await this.produtoService.remover(req.params.id);
+    res.status(204).send();
   };
 }

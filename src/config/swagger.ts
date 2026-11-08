@@ -853,6 +853,374 @@ export const swaggerDocument = {
           },
         },
       },
+      put: {
+        tags: ['Produtos'],
+        summary: 'Atualizar produto',
+        description: 'Atualiza os dados do item preservando SKU único e preço de venda superior ao custo. Requer um Bearer token válido.',
+        operationId: 'atualizarProduto',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do produto.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AtualizarProdutoRequest' },
+              example: {
+                precoCusto: 12.5,
+                precoVenda: 18.9,
+                estoqueMinimo: 8,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Produto atualizado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FornecedorProduto' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID ou payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'SKU já utilizado por outro produto.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'A venda deve superar o custo; o fornecedor informado deve existir e estar ativo.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        tags: ['Produtos'],
+        summary: 'Excluir produto',
+        description: 'Exclui somente produtos sem vínculos em itens de pedidos. Requer um Bearer token válido.',
+        operationId: 'removerProduto',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do produto.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '204': {
+            description: 'Produto excluído.',
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Produto vinculado a pedidos não pode ser excluído.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/pedidos': {
+      post: {
+        tags: ['Pedidos'],
+        summary: 'Criar pedido comercial',
+        description: 'Cria um pedido aprovado em uma transação atômica que valida cliente, estoque e crédito, calcula descontos e baixa estoque/crédito. Requer um Bearer token válido.',
+        operationId: 'criarPedido',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CriarPedidoRequest' },
+              example: {
+                clienteId: 1,
+                itens: [
+                  { produtoId: 3, quantidade: 12 },
+                  { produtoId: 8, quantidade: 20 },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Pedido aprovado com resumo financeiro e alertas de reposição.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PedidoCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'Payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '403': {
+            description: 'Cliente inativo para operações comerciais.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Cliente ou produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'Estoque insuficiente ou crédito insuficiente para aprovar o pedido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/pedidos/{id}': {
+      get: {
+        tags: ['Pedidos'],
+        summary: 'Consultar espelho do pedido',
+        description: 'Retorna os valores financeiros, status, cliente comprador e os itens faturados com SKU e nome dos produtos. Requer um Bearer token válido.',
+        operationId: 'buscarPedidoPorId',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do pedido.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Espelho detalhado do pedido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PedidoDetalhado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Pedido não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/pedidos/{id}/cancelar': {
+      patch: {
+        tags: ['Pedidos'],
+        summary: 'Cancelar pedido aprovado',
+        description: 'Cancela o pedido e, em uma transação atômica, devolve os itens ao estoque e recompõe o crédito utilizado. Só pedidos APROVADO podem ser cancelados. Requer um Bearer token válido.',
+        operationId: 'cancelarPedido',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do pedido.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Pedido cancelado e estornos concluídos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PedidoCancelado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Pedido ou produto vinculado não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Pedido já cancelado ou não está aprovado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {
@@ -1105,6 +1473,139 @@ export const swaggerDocument = {
           precoVenda: { type: 'number', exclusiveMinimum: 0, example: 15.9 },
           estoqueAtual: { type: 'integer', minimum: 0, example: 24 },
           estoqueMinimo: { type: 'integer', minimum: 0, example: 5 },
+          fornecedorId: { type: 'integer', minimum: 1, example: 1 },
+        },
+      },
+      CriarPedidoRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['clienteId', 'itens'],
+        properties: {
+          clienteId: { type: 'integer', minimum: 1, example: 1 },
+          itens: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['produtoId', 'quantidade'],
+              properties: {
+                produtoId: { type: 'integer', minimum: 1, example: 3 },
+                quantidade: { type: 'integer', minimum: 1, example: 12 },
+              },
+            },
+          },
+        },
+      },
+      PedidoCriado: {
+        type: 'object',
+        required: ['pedido', 'alertasReposicao'],
+        properties: {
+          pedido: {
+            type: 'object',
+            required: ['id', 'status', 'criadoEm', 'valorBruto', 'valorDesconto', 'valorLiquido'],
+            properties: {
+              id: { type: 'integer', example: 25 },
+              status: { type: 'string', enum: ['APROVADO'] },
+              criadoEm: { type: 'string', format: 'date-time' },
+              valorBruto: { type: 'number', example: 8200 },
+              valorDesconto: { type: 'number', example: 820 },
+              valorLiquido: { type: 'number', example: 7380 },
+            },
+          },
+          alertasReposicao: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/AlertaReposicao' },
+          },
+        },
+      },
+      PedidoDetalhado: {
+        type: 'object',
+        required: ['id', 'clienteId', 'status', 'valorBruto', 'valorDesconto', 'valorLiquido', 'criadoEm', 'cliente', 'itensPedido'],
+        properties: {
+          id: { type: 'integer', example: 25 },
+          clienteId: { type: 'integer', example: 1 },
+          status: { type: 'string', example: 'APROVADO' },
+          valorBruto: { type: 'number', example: 8200 },
+          valorDesconto: { type: 'number', example: 820 },
+          valorLiquido: { type: 'number', example: 7380 },
+          criadoEm: { type: 'string', format: 'date-time' },
+          cliente: { $ref: '#/components/schemas/PedidoCliente' },
+          itensPedido: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/PedidoItemDetalhado' },
+          },
+        },
+      },
+      PedidoCancelado: {
+        type: 'object',
+        required: ['pedido', 'estorno'],
+        properties: {
+          pedido: { $ref: '#/components/schemas/PedidoDetalhado' },
+          estorno: {
+            type: 'object',
+            required: ['creditoRestaurado', 'itensEstornados'],
+            properties: {
+              creditoRestaurado: { type: 'number', example: 7380 },
+              itensEstornados: { type: 'integer', example: 2 },
+            },
+          },
+        },
+      },
+      PedidoCliente: {
+        type: 'object',
+        required: ['id', 'razaoSocial', 'cnpj', 'email', 'limiteCredito'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          razaoSocial: { type: 'string', example: 'Distribuidora Exemplo Ltda.' },
+          cnpj: { type: 'string', example: '12345678000190' },
+          email: { type: 'string', format: 'email', example: 'compras@example.com' },
+          limiteCredito: { type: 'number', example: 2620 },
+        },
+      },
+      PedidoItemDetalhado: {
+        type: 'object',
+        required: ['id', 'pedidoId', 'produtoId', 'quantidade', 'precoUnitario', 'subtotal', 'produto'],
+        properties: {
+          id: { type: 'integer', example: 70 },
+          pedidoId: { type: 'integer', example: 25 },
+          produtoId: { type: 'integer', example: 3 },
+          quantidade: { type: 'integer', example: 12 },
+          precoUnitario: { type: 'number', example: 100 },
+          subtotal: { type: 'number', example: 1200 },
+          produto: {
+            type: 'object',
+            required: ['sku', 'nome'],
+            properties: {
+              sku: { type: 'string', example: 'PROD-001' },
+              nome: { type: 'string', example: 'Produto de exemplo' },
+            },
+          },
+        },
+      },
+      AlertaReposicao: {
+        type: 'object',
+        required: ['sku', 'nome', 'estoqueAtual', 'estoqueMinimo', 'nomeFantasia', 'prazoEntrega'],
+        properties: {
+          sku: { type: 'string', example: 'PROD-001' },
+          nome: { type: 'string', example: 'Produto de exemplo' },
+          estoqueAtual: { type: 'integer', example: 4 },
+          estoqueMinimo: { type: 'integer', example: 5 },
+          nomeFantasia: { type: 'string', example: 'Distribuidora Parceira' },
+          prazoEntrega: { type: 'integer', example: 7 },
+        },
+      },
+      AtualizarProdutoRequest: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          sku: { type: 'string', minLength: 1, example: 'PROD-001-REV2' },
+          nome: { type: 'string', minLength: 1, example: 'Produto atualizado' },
+          precoCusto: { type: 'number', exclusiveMinimum: 0, example: 12.5 },
+          precoVenda: { type: 'number', exclusiveMinimum: 0, example: 18.9 },
+          estoqueAtual: { type: 'integer', minimum: 0, example: 24 },
+          estoqueMinimo: { type: 'integer', minimum: 0, example: 8 },
           fornecedorId: { type: 'integer', minimum: 1, example: 1 },
         },
       },
