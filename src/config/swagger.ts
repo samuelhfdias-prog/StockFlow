@@ -583,6 +583,67 @@ export const swaggerDocument = {
           },
         },
       },
+      delete: {
+        tags: ['Fornecedores'],
+        summary: 'Excluir fornecedor',
+        description: 'Exclui fornecedores sem produtos vinculados. Requer um Bearer token válido.',
+        operationId: 'removerFornecedor',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '204': {
+            description: 'Fornecedor excluído.',
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Fornecedor não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Fornecedor com produtos vinculados não pode ser excluído.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {

@@ -26,6 +26,21 @@ export class FornecedorRepository {
     });
   }
 
+  findByIdWithProdutoCount(id: number) {
+    return prisma.fornecedor.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { produtos: true },
+        },
+      },
+    });
+  }
+
+  delete(id: number): Promise<Fornecedor> {
+    return prisma.fornecedor.delete({ where: { id } });
+  }
+
   findAll() {
     return prisma.fornecedor.findMany({
       include: {

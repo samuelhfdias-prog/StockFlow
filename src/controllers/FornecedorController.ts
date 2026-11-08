@@ -24,4 +24,9 @@ export class FornecedorController {
     const fornecedor = await this.fornecedorService.atualizar(req.params.id, req.body);
     res.status(200).json(fornecedor);
   };
+
+  remover: RequestHandler<{ id: string }> = async (req, res) => {
+    await this.fornecedorService.remover(req.params.id);
+    res.status(204).send();
+  };
 }

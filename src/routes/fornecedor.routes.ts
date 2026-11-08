@@ -10,6 +10,7 @@ const fornecedorController = new FornecedorController();
 fornecedorRoutes.get('/', ensureAuthenticated, fornecedorController.listar);
 fornecedorRoutes.get('/:id', ensureAuthenticated, fornecedorController.buscarPorId);
 fornecedorRoutes.put('/:id', ensureAuthenticated, validateBody(atualizarFornecedorSchema), fornecedorController.atualizar);
+fornecedorRoutes.delete('/:id', ensureAuthenticated, fornecedorController.remover);
 fornecedorRoutes.post('/', ensureAuthenticated, validateBody(criarFornecedorSchema), fornecedorController.criar);
 
 export default fornecedorRoutes;
