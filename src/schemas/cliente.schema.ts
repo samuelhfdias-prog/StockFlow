@@ -27,6 +27,20 @@ export const criarClienteSchema = z.object({
 
 export type CriarClienteInput = z.infer<typeof criarClienteSchema>;
 
+export const atualizarClienteSchema = z.object({
+  razaoSocial: z.string().trim().min(1, 'A razão social é obrigatória.').optional(),
+  cnpj: cnpjSchema.optional(),
+  email: emailSchema.optional(),
+  telefone: telefoneSchema.optional(),
+  limiteCredito: z.number().finite().positive('O limite de crédito deve ser maior que zero.').optional(),
+  ativo: z.boolean().optional(),
+}).strict().refine(
+  (dados) => Object.values(dados).some((valor) => valor !== undefined),
+  'Informe ao menos um campo para atualizar.',
+);
+
+export type AtualizarClienteInput = z.infer<typeof atualizarClienteSchema>;
+
 export const listarClientesQuerySchema = z.object({
   ativo: z.enum(['true', 'false']).optional().transform((ativo) => (
     ativo === undefined ? undefined : ativo === 'true'

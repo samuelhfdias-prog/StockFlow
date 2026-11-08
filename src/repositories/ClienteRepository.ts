@@ -1,6 +1,6 @@
 import { prisma } from '../database/prisma';
 import type { Cliente, Prisma } from '../generated/prisma/client';
-import type { CriarClienteInput } from '../schemas/cliente.schema';
+import type { AtualizarClienteInput, CriarClienteInput } from '../schemas/cliente.schema';
 import type { ListarClientesFiltros } from '../schemas/cliente.schema';
 
 type NovoCliente = Pick<CriarClienteInput, 'razaoSocial' | 'cnpj' | 'email' | 'telefone' | 'limiteCredito'>;
@@ -16,6 +16,25 @@ export class ClienteRepository {
 
   create(data: NovoCliente): Promise<Cliente> {
     return prisma.cliente.create({ data });
+  }
+
+  findById(id: number): Promise<Cliente | null> {
+    return prisma.cliente.findUnique({ where: { id } });
+  }
+
+  update(id: number, dados: AtualizarClienteInput): Promise<Cliente> {
+    return prisma.cliente.update({
+      where: { id },
+      data: dados,
+    });
+  }
+
+  countPedidosByClienteId(clienteId: number): Promise<number> {
+    return prisma.pedido.count({ where: { clienteId } });
+  }
+
+  delete(id: number): Promise<Cliente> {
+    return prisma.cliente.delete({ where: { id } });
   }
 
   findAll(filtros: ListarClientesFiltros): Promise<Cliente[]> {
