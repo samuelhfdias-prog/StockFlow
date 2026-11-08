@@ -507,6 +507,352 @@ export const swaggerDocument = {
           },
         },
       },
+      put: {
+        tags: ['Fornecedores'],
+        summary: 'Atualizar fornecedor',
+        description: 'Atualiza os dados de contato, prazo médio de entrega e situação operacional. Requer um Bearer token válido.',
+        operationId: 'atualizarFornecedor',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AtualizarFornecedorRequest' },
+              example: {
+                emailContato: 'contato@example.com',
+                prazoEntrega: 10,
+                ativo: true,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Fornecedor atualizado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FornecedorCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID ou payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Fornecedor não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        tags: ['Fornecedores'],
+        summary: 'Excluir fornecedor',
+        description: 'Exclui fornecedores sem produtos vinculados. Requer um Bearer token válido.',
+        operationId: 'removerFornecedor',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '204': {
+            description: 'Fornecedor excluído.',
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Fornecedor não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Fornecedor com produtos vinculados não pode ser excluído.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/produtos': {
+      get: {
+        tags: ['Produtos'],
+        summary: 'Listar produtos',
+        description: 'Lista produtos com os dados básicos do fornecedor, podendo filtrar por fornecedor e estoque crítico. Requer um Bearer token válido.',
+        operationId: 'listarProdutos',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'fornecedorId',
+            in: 'query',
+            required: false,
+            description: 'Filtra pelo ID positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+          {
+            name: 'estoqueCritico',
+            in: 'query',
+            required: false,
+            description: 'Quando true, retorna somente produtos com estoque atual menor ou igual ao mínimo.',
+            schema: { type: 'boolean' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Produtos e indicação calculada de estoque crítico.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ProdutoListado' },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Filtros de consulta inválidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Produtos'],
+        summary: 'Cadastrar produto',
+        description: 'Cadastra um produto com preço de venda superior ao custo e vinculado a um fornecedor ativo. Requer um Bearer token válido.',
+        operationId: 'criarProduto',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CriarProdutoRequest' },
+              example: {
+                sku: 'PROD-001',
+                nome: 'Produto de exemplo',
+                precoCusto: 10.5,
+                precoVenda: 15.9,
+                estoqueAtual: 24,
+                estoqueMinimo: 5,
+                fornecedorId: 1,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Produto cadastrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProdutoCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'Payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Já existe um produto com o SKU informado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'Margem inválida ou fornecedor inexistente/inativo.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/produtos/{id}': {
+      get: {
+        tags: ['Produtos'],
+        summary: 'Consultar produto por ID',
+        description: 'Retorna os dados detalhados do produto, seu fornecedor e os indicadores de margem e estoque crítico. Requer um Bearer token válido.',
+        operationId: 'buscarProdutoPorId',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do produto.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Ficha detalhada do produto.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProdutoDetalhado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'Não foi possível calcular a margem de lucro para os dados do produto.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {
@@ -661,6 +1007,17 @@ export const swaggerDocument = {
           prazoEntrega: { type: 'integer', minimum: 1, description: 'Prazo médio em dias.', example: 7 },
         },
       },
+      AtualizarFornecedorRequest: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          nomeFantasia: { type: 'string', minLength: 1, example: 'Distribuidora Parceira' },
+          emailContato: { type: 'string', format: 'email', example: 'contato@example.com' },
+          prazoEntrega: { type: 'integer', minimum: 1, description: 'Prazo médio em dias.', example: 10 },
+          ativo: { type: 'boolean', example: true },
+        },
+      },
       FornecedorCriado: {
         type: 'object',
         required: ['id', 'nomeFantasia', 'cnpj', 'emailContato', 'prazoEntrega', 'ativo'],
@@ -727,6 +1084,68 @@ export const swaggerDocument = {
           estoqueAtual: { type: 'integer', example: 24 },
           estoqueMinimo: { type: 'integer', example: 5 },
           fornecedorId: { type: 'integer', example: 1 },
+        },
+      },
+      CriarProdutoRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'sku',
+          'nome',
+          'precoCusto',
+          'precoVenda',
+          'estoqueAtual',
+          'estoqueMinimo',
+          'fornecedorId',
+        ],
+        properties: {
+          sku: { type: 'string', minLength: 1, example: 'PROD-001' },
+          nome: { type: 'string', minLength: 1, example: 'Produto de exemplo' },
+          precoCusto: { type: 'number', exclusiveMinimum: 0, example: 10.5 },
+          precoVenda: { type: 'number', exclusiveMinimum: 0, example: 15.9 },
+          estoqueAtual: { type: 'integer', minimum: 0, example: 24 },
+          estoqueMinimo: { type: 'integer', minimum: 0, example: 5 },
+          fornecedorId: { type: 'integer', minimum: 1, example: 1 },
+        },
+      },
+      ProdutoCriado: {
+        $ref: '#/components/schemas/FornecedorProduto',
+      },
+      ProdutoListado: {
+        allOf: [
+          { $ref: '#/components/schemas/FornecedorProduto' },
+          {
+            type: 'object',
+            required: ['estoqueCritico', 'fornecedor'],
+            properties: {
+              estoqueCritico: { type: 'boolean', example: true },
+              fornecedor: { $ref: '#/components/schemas/ProdutoFornecedorResumo' },
+            },
+          },
+        ],
+      },
+      ProdutoDetalhado: {
+        allOf: [
+          { $ref: '#/components/schemas/FornecedorProduto' },
+          {
+            type: 'object',
+            required: ['fornecedor', 'margemLucroPercentual', 'estoqueCritico'],
+            properties: {
+              fornecedor: { $ref: '#/components/schemas/FornecedorCriado' },
+              margemLucroPercentual: { type: 'number', example: 51.43 },
+              estoqueCritico: { type: 'boolean', example: false },
+            },
+          },
+        ],
+      },
+      ProdutoFornecedorResumo: {
+        type: 'object',
+        required: ['id', 'nomeFantasia', 'cnpj', 'ativo'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          nomeFantasia: { type: 'string', example: 'Distribuidora Parceira' },
+          cnpj: { type: 'string', example: '12345678000190' },
+          ativo: { type: 'boolean', example: true },
         },
       },
       CriarClienteRequest: {
