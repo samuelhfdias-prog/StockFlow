@@ -1,0 +1,60 @@
+import { Prisma } from '../generated/prisma/client';
+import { AppError } from '../errors/AppError';
+import { ClienteRepository } from '../repositories/ClienteRepository';
+import { listarClientesQuerySchema, type CriarClienteInput } from '../schemas/cliente.schema';
+
+export class ClienteService {
+  constructor(
+    private readonly clienteRepository: Pick<ClienteRepository, 'findByCnpj' | 'findByEmail' | 'create' | 'findAll' | 'findByIdWithPedidos'> = new ClienteRepository(),
+  ) {}
+
+  async criar(input: CriarClienteInput) {
+    const clientePorCnpj = await this.clienteRepository.findByCnpj(input.cnpj);
+
+    if (clientePorCnpj) {
+      throw new AppError('Já existe um cliente com este CNPJ ou e-mail.', 409);
+    }
+
+    const clientePorEmail = await this.clienteRepository.findByEmail(input.email);
+
+    if (clientePorEmail) {
+      throw new AppError('Já existe um cliente com este CNPJ ou e-mail.', 409);
+    }
+
+    try {
+      return await this.clienteRepository.create(input);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new AppError('Já existe um cliente com este CNPJ ou e-mail.', 409);
+      }
+
+      throw error;
+    }
+  }
+
+  async listar(query: { ativo?: unknown; razaoSocial?: unknown }) {
+    const filtros = listarClientesQuerySchema.safeParse(query);
+
+    if (!filtros.success) {
+      throw new AppError('Filtros de consulta inválidos.', 400);
+    }
+
+    return this.clienteRepository.findAll(filtros.data);
+  }
+
+  async buscarPorId(id: string) {
+    const clienteId = Number(id);
+
+    if (!Number.isSafeInteger(clienteId) || clienteId <= 0) {
+      throw new AppError('O ID do cliente deve ser um número inteiro positivo.', 400);
+    }
+
+    const cliente = await this.clienteRepository.findByIdWithPedidos(clienteId);
+
+    if (!cliente) {
+      throw new AppError('Cliente não encontrado.', 404);
+    }
+
+    return cliente;
+  }
+}
