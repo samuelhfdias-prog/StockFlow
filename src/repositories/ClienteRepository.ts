@@ -29,6 +29,14 @@ export class ClienteRepository {
     });
   }
 
+  countPedidosByClienteId(clienteId: number): Promise<number> {
+    return prisma.pedido.count({ where: { clienteId } });
+  }
+
+  delete(id: number): Promise<Cliente> {
+    return prisma.cliente.delete({ where: { id } });
+  }
+
   findAll(filtros: ListarClientesFiltros): Promise<Cliente[]> {
     const where: Prisma.ClienteWhereInput = {};
 

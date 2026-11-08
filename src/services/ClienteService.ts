@@ -11,7 +11,15 @@ export class ClienteService {
   constructor(
     private readonly clienteRepository: Pick<
       ClienteRepository,
-      'findByCnpj' | 'findByEmail' | 'create' | 'findAll' | 'findByIdWithPedidos' | 'findById' | 'update'
+      | 'findByCnpj'
+      | 'findByEmail'
+      | 'create'
+      | 'findAll'
+      | 'findByIdWithPedidos'
+      | 'findById'
+      | 'update'
+      | 'countPedidosByClienteId'
+      | 'delete'
     > = new ClienteRepository(),
   ) {}
 
@@ -96,6 +104,42 @@ export class ClienteService {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           throw new AppError('Já existe outro cliente com este CNPJ ou e-mail.', 409);
+        }
+
+        if (error.code === 'P2025') {
+          throw new AppError('Cliente não encontrado.', 404);
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  async remover(id: string): Promise<void> {
+    const clienteId = Number(id);
+
+    if (!Number.isSafeInteger(clienteId) || clienteId <= 0) {
+      throw new AppError('O ID do cliente deve ser um número inteiro positivo.', 400);
+    }
+
+    const cliente = await this.clienteRepository.findById(clienteId);
+
+    if (!cliente) {
+      throw new AppError('Cliente não encontrado.', 404);
+    }
+
+    const pedidosVinculados = await this.clienteRepository.countPedidosByClienteId(clienteId);
+
+    if (pedidosVinculados > 0) {
+      throw new AppError('O cliente possui histórico transacional e deve ser apenas inativado.', 409);
+    }
+
+    try {
+      await this.clienteRepository.delete(clienteId);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2003') {
+          throw new AppError('O cliente possui histórico transacional e deve ser apenas inativado.', 409);
         }
 
         if (error.code === 'P2025') {

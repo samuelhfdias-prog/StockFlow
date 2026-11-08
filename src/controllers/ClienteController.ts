@@ -27,4 +27,9 @@ export class ClienteController {
     const cliente = await this.clienteService.atualizar(req.params.id, req.body);
     res.status(200).json(cliente);
   };
+
+  remover: RequestHandler<{ id: string }> = async (req, res) => {
+    await this.clienteService.remover(req.params.id);
+    res.status(204).send();
+  };
 }
