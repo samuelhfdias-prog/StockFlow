@@ -1094,6 +1094,66 @@ export const swaggerDocument = {
         },
       },
     },
+    '/pedidos/{id}': {
+      get: {
+        tags: ['Pedidos'],
+        summary: 'Consultar espelho do pedido',
+        description: 'Retorna os valores financeiros, status, cliente comprador e os itens faturados com SKU e nome dos produtos. Requer um Bearer token válido.',
+        operationId: 'buscarPedidoPorId',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do pedido.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Espelho detalhado do pedido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PedidoDetalhado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Pedido não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -1388,6 +1448,55 @@ export const swaggerDocument = {
           alertasReposicao: {
             type: 'array',
             items: { $ref: '#/components/schemas/AlertaReposicao' },
+          },
+        },
+      },
+      PedidoDetalhado: {
+        type: 'object',
+        required: ['id', 'clienteId', 'status', 'valorBruto', 'valorDesconto', 'valorLiquido', 'criadoEm', 'cliente', 'itensPedido'],
+        properties: {
+          id: { type: 'integer', example: 25 },
+          clienteId: { type: 'integer', example: 1 },
+          status: { type: 'string', example: 'APROVADO' },
+          valorBruto: { type: 'number', example: 8200 },
+          valorDesconto: { type: 'number', example: 820 },
+          valorLiquido: { type: 'number', example: 7380 },
+          criadoEm: { type: 'string', format: 'date-time' },
+          cliente: { $ref: '#/components/schemas/PedidoCliente' },
+          itensPedido: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/PedidoItemDetalhado' },
+          },
+        },
+      },
+      PedidoCliente: {
+        type: 'object',
+        required: ['id', 'razaoSocial', 'cnpj', 'email', 'limiteCredito'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          razaoSocial: { type: 'string', example: 'Distribuidora Exemplo Ltda.' },
+          cnpj: { type: 'string', example: '12345678000190' },
+          email: { type: 'string', format: 'email', example: 'compras@example.com' },
+          limiteCredito: { type: 'number', example: 2620 },
+        },
+      },
+      PedidoItemDetalhado: {
+        type: 'object',
+        required: ['id', 'pedidoId', 'produtoId', 'quantidade', 'precoUnitario', 'subtotal', 'produto'],
+        properties: {
+          id: { type: 'integer', example: 70 },
+          pedidoId: { type: 'integer', example: 25 },
+          produtoId: { type: 'integer', example: 3 },
+          quantidade: { type: 'integer', example: 12 },
+          precoUnitario: { type: 'number', example: 100 },
+          subtotal: { type: 'number', example: 1200 },
+          produto: {
+            type: 'object',
+            required: ['sku', 'nome'],
+            properties: {
+              sku: { type: 'string', example: 'PROD-001' },
+              nome: { type: 'string', example: 'Produto de exemplo' },
+            },
           },
         },
       },

@@ -9,4 +9,9 @@ export class PedidoController {
     const resultado = await this.pedidoService.criarPedido(req.body);
     res.status(201).json(resultado);
   };
+
+  buscarPorId: RequestHandler<{ id: string }> = async (req, res) => {
+    const pedido = await this.pedidoService.buscarPorId(req.params.id);
+    res.status(200).json(pedido);
+  };
 }

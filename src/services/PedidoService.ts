@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '../generated/prisma/client';
 import { prisma } from '../database/prisma';
 import { AppError } from '../errors/AppError';
+import { PedidoRepository } from '../repositories/PedidoRepository';
 import type { CriarPedidoInput } from '../schemas/pedido.schema';
 
 type AlertaReposicao = {
@@ -13,7 +14,10 @@ type AlertaReposicao = {
 };
 
 export class PedidoService {
-  constructor(private readonly prismaClient: PrismaClient = prisma) {}
+  constructor(
+    private readonly prismaClient: PrismaClient = prisma,
+    private readonly pedidoRepository: Pick<PedidoRepository, 'findByIdWithClienteAndItens'> = new PedidoRepository(),
+  ) {}
 
   async criarPedido(dados: CriarPedidoInput) {
     return this.prismaClient.$transaction(async (tx) => {
@@ -191,5 +195,21 @@ export class PedidoService {
         alertasReposicao,
       };
     });
+  }
+
+  async buscarPorId(id: string) {
+    const pedidoId = Number(id);
+
+    if (!Number.isSafeInteger(pedidoId) || pedidoId <= 0) {
+      throw new AppError('O ID do pedido deve ser um número inteiro positivo.', 400);
+    }
+
+    const pedido = await this.pedidoRepository.findByIdWithClienteAndItens(pedidoId);
+
+    if (!pedido) {
+      throw new AppError('Pedido não encontrado.', 404);
+    }
+
+    return pedido;
   }
 }
