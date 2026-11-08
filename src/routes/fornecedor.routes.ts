@@ -8,6 +8,7 @@ const fornecedorRoutes = Router();
 const fornecedorController = new FornecedorController();
 
 fornecedorRoutes.get('/', ensureAuthenticated, fornecedorController.listar);
+fornecedorRoutes.get('/:id', ensureAuthenticated, fornecedorController.buscarPorId);
 fornecedorRoutes.post('/', ensureAuthenticated, validateBody(criarFornecedorSchema), fornecedorController.criar);
 
 export default fornecedorRoutes;

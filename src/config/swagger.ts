@@ -448,6 +448,66 @@ export const swaggerDocument = {
         },
       },
     },
+    '/fornecedores/{id}': {
+      get: {
+        tags: ['Fornecedores'],
+        summary: 'Consultar fornecedor por ID',
+        description: 'Retorna os dados do fornecedor e todos os produtos vinculados ao catálogo. Requer um Bearer token válido.',
+        operationId: 'buscarFornecedorPorId',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Fornecedor detalhado com a lista de produtos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FornecedorDetalhado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Fornecedor não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -630,6 +690,44 @@ export const swaggerDocument = {
             },
           },
         ],
+      },
+      FornecedorDetalhado: {
+        allOf: [
+          { $ref: '#/components/schemas/FornecedorCriado' },
+          {
+            type: 'object',
+            required: ['produtos'],
+            properties: {
+              produtos: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/FornecedorProduto' },
+              },
+            },
+          },
+        ],
+      },
+      FornecedorProduto: {
+        type: 'object',
+        required: [
+          'id',
+          'sku',
+          'nome',
+          'precoCusto',
+          'precoVenda',
+          'estoqueAtual',
+          'estoqueMinimo',
+          'fornecedorId',
+        ],
+        properties: {
+          id: { type: 'integer', example: 3 },
+          sku: { type: 'string', example: 'PROD-001' },
+          nome: { type: 'string', example: 'Produto de exemplo' },
+          precoCusto: { type: 'number', example: 10.5 },
+          precoVenda: { type: 'number', example: 15.9 },
+          estoqueAtual: { type: 'integer', example: 24 },
+          estoqueMinimo: { type: 'integer', example: 5 },
+          fornecedorId: { type: 'integer', example: 1 },
+        },
       },
       CriarClienteRequest: {
         type: 'object',

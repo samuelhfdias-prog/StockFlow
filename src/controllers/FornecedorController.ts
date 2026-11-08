@@ -14,4 +14,9 @@ export class FornecedorController {
     const fornecedores = await this.fornecedorService.listar();
     res.status(200).json(fornecedores);
   };
+
+  buscarPorId: RequestHandler<{ id: string }> = async (req, res) => {
+    const fornecedor = await this.fornecedorService.buscarPorId(req.params.id);
+    res.status(200).json(fornecedor);
+  };
 }

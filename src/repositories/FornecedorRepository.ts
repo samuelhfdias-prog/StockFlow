@@ -25,4 +25,11 @@ export class FornecedorRepository {
       orderBy: { nomeFantasia: 'asc' },
     });
   }
+
+  findByIdWithProdutos(id: number) {
+    return prisma.fornecedor.findUnique({
+      where: { id },
+      include: { produtos: true },
+    });
+  }
 }
