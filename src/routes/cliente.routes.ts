@@ -7,6 +7,7 @@ import { criarClienteSchema } from '../schemas/cliente.schema';
 const clienteRoutes = Router();
 const clienteController = new ClienteController();
 
+clienteRoutes.get('/', ensureAuthenticated, clienteController.listar);
 clienteRoutes.post('/', ensureAuthenticated, validateBody(criarClienteSchema), clienteController.criar);
 
 export default clienteRoutes;

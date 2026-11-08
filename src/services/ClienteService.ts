@@ -1,11 +1,11 @@
 import { Prisma } from '../generated/prisma/client';
 import { AppError } from '../errors/AppError';
 import { ClienteRepository } from '../repositories/ClienteRepository';
-import type { CriarClienteInput } from '../schemas/cliente.schema';
+import { listarClientesQuerySchema, type CriarClienteInput } from '../schemas/cliente.schema';
 
 export class ClienteService {
   constructor(
-    private readonly clienteRepository: Pick<ClienteRepository, 'findByCnpj' | 'findByEmail' | 'create'> = new ClienteRepository(),
+    private readonly clienteRepository: Pick<ClienteRepository, 'findByCnpj' | 'findByEmail' | 'create' | 'findAll'> = new ClienteRepository(),
   ) {}
 
   async criar(input: CriarClienteInput) {
@@ -30,5 +30,15 @@ export class ClienteService {
 
       throw error;
     }
+  }
+
+  async listar(query: { ativo?: unknown; razaoSocial?: unknown }) {
+    const filtros = listarClientesQuerySchema.safeParse(query);
+
+    if (!filtros.success) {
+      throw new AppError('Filtros de consulta inválidos.', 400);
+    }
+
+    return this.clienteRepository.findAll(filtros.data);
   }
 }

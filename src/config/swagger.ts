@@ -7,6 +7,66 @@ export const swaggerDocument = {
   },
   paths: {
     '/clientes': {
+      get: {
+        tags: ['Clientes'],
+        summary: 'Listar clientes',
+        description: 'Lista clientes cadastrados com filtros opcionais. Requer um Bearer token válido.',
+        operationId: 'listarClientes',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'ativo',
+            in: 'query',
+            required: false,
+            description: 'Filtra pelo status ativo ou inativo.',
+            schema: { type: 'boolean' },
+          },
+          {
+            name: 'razaoSocial',
+            in: 'query',
+            required: false,
+            description: 'Busca parcial, sem diferenciar maiúsculas de minúsculas conforme a collation do MySQL.',
+            schema: { type: 'string', minLength: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Lista de clientes.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ClienteCriado' },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Filtros de consulta inválidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
       post: {
         tags: ['Clientes'],
         summary: 'Cadastrar cliente',

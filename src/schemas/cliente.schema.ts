@@ -26,3 +26,12 @@ export const criarClienteSchema = z.object({
 }).strict();
 
 export type CriarClienteInput = z.infer<typeof criarClienteSchema>;
+
+export const listarClientesQuerySchema = z.object({
+  ativo: z.enum(['true', 'false']).optional().transform((ativo) => (
+    ativo === undefined ? undefined : ativo === 'true'
+  )),
+  razaoSocial: z.string().trim().min(1, 'A razão social não pode estar vazia.').optional(),
+}).strict();
+
+export type ListarClientesFiltros = z.infer<typeof listarClientesQuerySchema>;
