@@ -27,4 +27,9 @@ export class ProdutoController {
     const produto = await this.produtoService.atualizar(req.params.id, req.body);
     res.status(200).json(produto);
   };
+
+  remover: RequestHandler<{ id: string }> = async (req, res) => {
+    await this.produtoService.remover(req.params.id);
+    res.status(204).send();
+  };
 }

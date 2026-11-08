@@ -27,6 +27,14 @@ export class ProdutoRepository {
     });
   }
 
+  countItensPedidoByProdutoId(produtoId: number): Promise<number> {
+    return prisma.itemPedido.count({ where: { produtoId } });
+  }
+
+  delete(id: number): Promise<Produto> {
+    return prisma.produto.delete({ where: { id } });
+  }
+
   findAll(fornecedorId?: number) {
     const where: Prisma.ProdutoWhereInput = {};
 

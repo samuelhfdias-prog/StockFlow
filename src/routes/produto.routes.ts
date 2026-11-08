@@ -10,6 +10,7 @@ const produtoController = new ProdutoController();
 produtoRoutes.get('/', ensureAuthenticated, produtoController.listar);
 produtoRoutes.get('/:id', ensureAuthenticated, produtoController.buscarPorId);
 produtoRoutes.put('/:id', ensureAuthenticated, validateBody(atualizarProdutoSchema), produtoController.atualizar);
+produtoRoutes.delete('/:id', ensureAuthenticated, produtoController.remover);
 produtoRoutes.post('/', ensureAuthenticated, validateBody(criarProdutoSchema), produtoController.criar);
 
 export default produtoRoutes;

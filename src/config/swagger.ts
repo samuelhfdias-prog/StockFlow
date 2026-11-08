@@ -945,6 +945,67 @@ export const swaggerDocument = {
           },
         },
       },
+      delete: {
+        tags: ['Produtos'],
+        summary: 'Excluir produto',
+        description: 'Exclui somente produtos sem vínculos em itens de pedidos. Requer um Bearer token válido.',
+        operationId: 'removerProduto',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do produto.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '204': {
+            description: 'Produto excluído.',
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Produto vinculado a pedidos não pode ser excluído.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {

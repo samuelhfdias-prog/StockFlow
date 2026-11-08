@@ -12,7 +12,14 @@ export class ProdutoService {
   constructor(
     private readonly produtoRepository: Pick<
       ProdutoRepository,
-      'findBySku' | 'create' | 'findAll' | 'findByIdWithFornecedor' | 'findById' | 'update'
+      | 'findBySku'
+      | 'create'
+      | 'findAll'
+      | 'findByIdWithFornecedor'
+      | 'findById'
+      | 'update'
+      | 'countItensPedidoByProdutoId'
+      | 'delete'
     > = new ProdutoRepository(),
     private readonly fornecedorRepository: Pick<FornecedorRepository, 'findById'> = new FornecedorRepository(),
   ) {}
@@ -154,6 +161,42 @@ export class ProdutoService {
 
         if (error.code === 'P2003') {
           throw new AppError('Fornecedor informado não existe.', 422);
+        }
+
+        if (error.code === 'P2025') {
+          throw new AppError('Produto não encontrado.', 404);
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  async remover(id: string): Promise<void> {
+    const produtoId = Number(id);
+
+    if (!Number.isSafeInteger(produtoId) || produtoId <= 0) {
+      throw new AppError('O ID do produto deve ser um número inteiro positivo.', 400);
+    }
+
+    const produto = await this.produtoRepository.findById(produtoId);
+
+    if (!produto) {
+      throw new AppError('Produto não encontrado.', 404);
+    }
+
+    const itensVinculados = await this.produtoRepository.countItensPedidoByProdutoId(produtoId);
+
+    if (itensVinculados > 0) {
+      throw new AppError('Produto vinculado a pedidos não pode ser excluído.', 409);
+    }
+
+    try {
+      await this.produtoRepository.delete(produtoId);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2003') {
+          throw new AppError('Produto vinculado a pedidos não pode ser excluído.', 409);
         }
 
         if (error.code === 'P2025') {
