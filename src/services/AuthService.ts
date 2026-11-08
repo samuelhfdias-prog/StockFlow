@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { Prisma } from '../generated/prisma/client';
+import { jwtSecret } from '../config/jwt';
 import { AppError } from '../errors/AppError';
 import { UsuarioRepository } from '../repositories/UsuarioRepository';
-import type { RegistrarUsuarioInput } from '../schemas/auth.schema';
+import type { LoginInput, RegistrarUsuarioInput } from '../schemas/auth.schema';
 
 export type UsuarioRegistrado = {
   id: number;
@@ -52,6 +54,33 @@ export class AuthService {
       email: usuario.email,
       cargo: usuario.cargo,
       criadoEm: usuario.criadoEm,
+    };
+  }
+
+  async login(input: LoginInput): Promise<{
+    token: string;
+    usuario: Pick<UsuarioRegistrado, 'id' | 'nome' | 'email' | 'cargo'>;
+  }> {
+    const usuario = await this.usuarioRepository.findByEmail(input.email);
+
+    if (!usuario || !(await bcrypt.compare(input.senha, usuario.senhaHash))) {
+      throw new AppError('E-mail ou senha inválidos.', 401);
+    }
+
+    const token = jwt.sign(
+      { id: usuario.id, cargo: usuario.cargo },
+      jwtSecret,
+      { expiresIn: '8h' },
+    );
+
+    return {
+      token,
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        cargo: usuario.cargo,
+      },
     };
   }
 }

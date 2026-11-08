@@ -11,7 +11,13 @@ Repository initialization.
    ```
 
 2. Copie `.env.example` para `.env` e ajuste `DATABASE_URL` com a senha do MySQL. O `.env` é ignorado pelo Git. Para uma conta root sem senha, use `mysql://root@127.0.0.1:3306/stockflow`. Codifique caracteres especiais da senha como URL encoding.
-3. Instale as dependências e gere o cliente Prisma:
+3. Gere um segredo JWT aleatório com pelo menos 32 bytes e substitua o valor de exemplo de `JWT_SECRET` no `.env`:
+
+   ```powershell
+   node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+   ```
+
+4. Instale as dependências e gere o cliente Prisma:
 
    ```powershell
    npm install
@@ -19,7 +25,7 @@ Repository initialization.
    npm run db:push
    ```
 
-4. Inicie o servidor local:
+5. Inicie o servidor local:
 
    ```powershell
    npm run dev
@@ -29,4 +35,4 @@ Repository initialization.
 
 Use uma conta MySQL dedicada e com privilégios mínimos fora do ambiente local de demonstração. Nunca versione o arquivo `.env` nem compartilhe sua senha.
 
-O Swagger está inicializado e documenta o endpoint de registro em `/api-docs/`.
+O Swagger está inicializado e documenta os endpoints de autenticação em `/api-docs/`.

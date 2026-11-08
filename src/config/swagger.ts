@@ -6,6 +6,65 @@ export const swaggerDocument = {
     description: 'API de gestão de estoque e pedidos comerciais atacadistas.',
   },
   paths: {
+    '/auth/login': {
+      post: {
+        tags: ['Autenticação'],
+        summary: 'Autenticar usuário',
+        description: 'Valida as credenciais e retorna um token JWT com validade de 8 horas.',
+        operationId: 'loginUsuario',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/LoginRequest' },
+              example: {
+                email: 'samuel@example.com',
+                senha: 'senha123',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Autenticação concluída.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/LoginResponse' },
+              },
+            },
+          },
+          '400': {
+            description: 'Payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'E-mail ou senha inválidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/registrar': {
       post: {
         tags: ['Autenticação'],
@@ -77,7 +136,41 @@ export const swaggerDocument = {
     },
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
     schemas: {
+      LoginRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['email', 'senha'],
+        properties: {
+          email: { type: 'string', format: 'email', example: 'samuel@example.com' },
+          senha: { type: 'string', minLength: 1, format: 'password', example: 'senha123' },
+        },
+      },
+      LoginResponse: {
+        type: 'object',
+        required: ['token', 'usuario'],
+        properties: {
+          token: { type: 'string', description: 'JWT com validade de 8 horas.' },
+          usuario: { $ref: '#/components/schemas/UsuarioAutenticado' },
+        },
+      },
+      UsuarioAutenticado: {
+        type: 'object',
+        required: ['id', 'nome', 'email', 'cargo'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          nome: { type: 'string', example: 'Samuel Dias' },
+          email: { type: 'string', format: 'email', example: 'samuel@example.com' },
+          cargo: { type: 'string', enum: ['ADMIN', 'OPERADOR'] },
+        },
+      },
       RegistrarUsuarioRequest: {
         type: 'object',
         additionalProperties: false,
