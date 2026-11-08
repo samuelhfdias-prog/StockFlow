@@ -1,6 +1,6 @@
 import { prisma } from '../database/prisma';
 import type { Produto, Prisma } from '../generated/prisma/client';
-import type { CriarProdutoInput } from '../schemas/produto.schema';
+import type { AtualizarProdutoInput, CriarProdutoInput } from '../schemas/produto.schema';
 
 type NovoProduto = Pick<
   CriarProdutoInput,
@@ -12,8 +12,19 @@ export class ProdutoRepository {
     return prisma.produto.findUnique({ where: { sku } });
   }
 
+  findById(id: number): Promise<Produto | null> {
+    return prisma.produto.findUnique({ where: { id } });
+  }
+
   create(data: NovoProduto): Promise<Produto> {
     return prisma.produto.create({ data });
+  }
+
+  update(id: number, data: AtualizarProdutoInput): Promise<Produto> {
+    return prisma.produto.update({
+      where: { id },
+      data,
+    });
   }
 
   findAll(fornecedorId?: number) {

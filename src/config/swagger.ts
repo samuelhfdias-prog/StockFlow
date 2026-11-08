@@ -853,6 +853,98 @@ export const swaggerDocument = {
           },
         },
       },
+      put: {
+        tags: ['Produtos'],
+        summary: 'Atualizar produto',
+        description: 'Atualiza os dados do item preservando SKU único e preço de venda superior ao custo. Requer um Bearer token válido.',
+        operationId: 'atualizarProduto',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do produto.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AtualizarProdutoRequest' },
+              example: {
+                precoCusto: 12.5,
+                precoVenda: 18.9,
+                estoqueMinimo: 8,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Produto atualizado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FornecedorProduto' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID ou payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'SKU já utilizado por outro produto.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'A venda deve superar o custo; o fornecedor informado deve existir e estar ativo.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {
@@ -1105,6 +1197,20 @@ export const swaggerDocument = {
           precoVenda: { type: 'number', exclusiveMinimum: 0, example: 15.9 },
           estoqueAtual: { type: 'integer', minimum: 0, example: 24 },
           estoqueMinimo: { type: 'integer', minimum: 0, example: 5 },
+          fornecedorId: { type: 'integer', minimum: 1, example: 1 },
+        },
+      },
+      AtualizarProdutoRequest: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          sku: { type: 'string', minLength: 1, example: 'PROD-001-REV2' },
+          nome: { type: 'string', minLength: 1, example: 'Produto atualizado' },
+          precoCusto: { type: 'number', exclusiveMinimum: 0, example: 12.5 },
+          precoVenda: { type: 'number', exclusiveMinimum: 0, example: 18.9 },
+          estoqueAtual: { type: 'integer', minimum: 0, example: 24 },
+          estoqueMinimo: { type: 'integer', minimum: 0, example: 8 },
           fornecedorId: { type: 'integer', minimum: 1, example: 1 },
         },
       },
