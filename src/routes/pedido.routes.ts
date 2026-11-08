@@ -8,6 +8,7 @@ const pedidoRoutes = Router();
 const pedidoController = new PedidoController();
 
 pedidoRoutes.get('/:id', ensureAuthenticated, pedidoController.buscarPorId);
+pedidoRoutes.patch('/:id/cancelar', ensureAuthenticated, pedidoController.cancelarPedido);
 pedidoRoutes.post('/', ensureAuthenticated, validateBody(criarPedidoSchema), pedidoController.criarPedido);
 
 export default pedidoRoutes;

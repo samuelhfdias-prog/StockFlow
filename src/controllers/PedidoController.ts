@@ -14,4 +14,9 @@ export class PedidoController {
     const pedido = await this.pedidoService.buscarPorId(req.params.id);
     res.status(200).json(pedido);
   };
+
+  cancelarPedido: RequestHandler<{ id: string }> = async (req, res) => {
+    const resultado = await this.pedidoService.cancelarPedido(req.params.id);
+    res.status(200).json(resultado);
+  };
 }

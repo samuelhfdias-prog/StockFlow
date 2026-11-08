@@ -1154,6 +1154,74 @@ export const swaggerDocument = {
         },
       },
     },
+    '/pedidos/{id}/cancelar': {
+      patch: {
+        tags: ['Pedidos'],
+        summary: 'Cancelar pedido aprovado',
+        description: 'Cancela o pedido e, em uma transação atômica, devolve os itens ao estoque e recompõe o crédito utilizado. Só pedidos APROVADO podem ser cancelados. Requer um Bearer token válido.',
+        operationId: 'cancelarPedido',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do pedido.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Pedido cancelado e estornos concluídos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PedidoCancelado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Pedido ou produto vinculado não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Pedido já cancelado ou não está aprovado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -1466,6 +1534,21 @@ export const swaggerDocument = {
           itensPedido: {
             type: 'array',
             items: { $ref: '#/components/schemas/PedidoItemDetalhado' },
+          },
+        },
+      },
+      PedidoCancelado: {
+        type: 'object',
+        required: ['pedido', 'estorno'],
+        properties: {
+          pedido: { $ref: '#/components/schemas/PedidoDetalhado' },
+          estorno: {
+            type: 'object',
+            required: ['creditoRestaurado', 'itensEstornados'],
+            properties: {
+              creditoRestaurado: { type: 'number', example: 7380 },
+              itensEstornados: { type: 'integer', example: 2 },
+            },
           },
         },
       },

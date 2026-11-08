@@ -212,4 +212,85 @@ export class PedidoService {
 
     return pedido;
   }
+
+  async cancelarPedido(id: string) {
+    const pedidoId = Number(id);
+
+    if (!Number.isSafeInteger(pedidoId) || pedidoId <= 0) {
+      throw new AppError('O ID do pedido deve ser um número inteiro positivo.', 400);
+    }
+
+    return this.prismaClient.$transaction(async (tx) => {
+      const pedido = await tx.pedido.findUnique({
+        where: { id: pedidoId },
+        include: {
+          itensPedido: {
+            select: {
+              produtoId: true,
+              quantidade: true,
+            },
+          },
+        },
+      });
+
+      if (!pedido) {
+        throw new AppError('Pedido não encontrado.', 404);
+      }
+
+      if (pedido.status !== 'APROVADO') {
+        throw new AppError('Somente pedidos aprovados podem ser cancelados.', 409);
+      }
+
+      const cancelamento = await tx.pedido.updateMany({
+        where: { id: pedidoId, status: 'APROVADO' },
+        data: { status: 'CANCELADO' },
+      });
+
+      if (cancelamento.count !== 1) {
+        throw new AppError('Somente pedidos aprovados podem ser cancelados.', 409);
+      }
+
+      const quantidadesPorProduto = new Map<number, number>();
+
+      for (const item of pedido.itensPedido) {
+        quantidadesPorProduto.set(
+          item.produtoId,
+          (quantidadesPorProduto.get(item.produtoId) ?? 0) + item.quantidade,
+        );
+      }
+
+      for (const [produtoId, quantidade] of [...quantidadesPorProduto].sort(([idA], [idB]) => idA - idB)) {
+        const restock = await tx.produto.updateMany({
+          where: { id: produtoId },
+          data: { estoqueAtual: { increment: quantidade } },
+        });
+
+        if (restock.count !== 1) {
+          throw new AppError('Produto do pedido não encontrado durante o estorno.', 404);
+        }
+      }
+
+      await tx.cliente.update({
+        where: { id: pedido.clienteId },
+        data: { limiteCredito: { increment: pedido.valorLiquido } },
+      });
+
+      const pedidoAtualizado = await tx.pedido.findUnique({
+        where: { id: pedidoId },
+        include: { itensPedido: true },
+      });
+
+      if (!pedidoAtualizado) {
+        throw new AppError('Pedido não encontrado.', 404);
+      }
+
+      return {
+        pedido: pedidoAtualizado,
+        estorno: {
+          creditoRestaurado: pedido.valorLiquido,
+          itensEstornados: pedido.itensPedido.length,
+        },
+      };
+    });
+  }
 }
