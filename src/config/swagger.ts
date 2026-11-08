@@ -645,6 +645,87 @@ export const swaggerDocument = {
         },
       },
     },
+    '/produtos': {
+      post: {
+        tags: ['Produtos'],
+        summary: 'Cadastrar produto',
+        description: 'Cadastra um produto com preço de venda superior ao custo e vinculado a um fornecedor ativo. Requer um Bearer token válido.',
+        operationId: 'criarProduto',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CriarProdutoRequest' },
+              example: {
+                sku: 'PROD-001',
+                nome: 'Produto de exemplo',
+                precoCusto: 10.5,
+                precoVenda: 15.9,
+                estoqueAtual: 24,
+                estoqueMinimo: 5,
+                fornecedorId: 1,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Produto cadastrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProdutoCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'Payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Já existe um produto com o SKU informado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'Margem inválida ou fornecedor inexistente/inativo.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -876,6 +957,31 @@ export const swaggerDocument = {
           estoqueMinimo: { type: 'integer', example: 5 },
           fornecedorId: { type: 'integer', example: 1 },
         },
+      },
+      CriarProdutoRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'sku',
+          'nome',
+          'precoCusto',
+          'precoVenda',
+          'estoqueAtual',
+          'estoqueMinimo',
+          'fornecedorId',
+        ],
+        properties: {
+          sku: { type: 'string', minLength: 1, example: 'PROD-001' },
+          nome: { type: 'string', minLength: 1, example: 'Produto de exemplo' },
+          precoCusto: { type: 'number', exclusiveMinimum: 0, example: 10.5 },
+          precoVenda: { type: 'number', exclusiveMinimum: 0, example: 15.9 },
+          estoqueAtual: { type: 'integer', minimum: 0, example: 24 },
+          estoqueMinimo: { type: 'integer', minimum: 0, example: 5 },
+          fornecedorId: { type: 'integer', minimum: 1, example: 1 },
+        },
+      },
+      ProdutoCriado: {
+        $ref: '#/components/schemas/FornecedorProduto',
       },
       CriarClienteRequest: {
         type: 'object',
