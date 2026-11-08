@@ -786,6 +786,74 @@ export const swaggerDocument = {
         },
       },
     },
+    '/produtos/{id}': {
+      get: {
+        tags: ['Produtos'],
+        summary: 'Consultar produto por ID',
+        description: 'Retorna os dados detalhados do produto, seu fornecedor e os indicadores de margem e estoque crítico. Requer um Bearer token válido.',
+        operationId: 'buscarProdutoPorId',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do produto.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Ficha detalhada do produto.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProdutoDetalhado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Produto não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '422': {
+            description: 'Não foi possível calcular a margem de lucro para os dados do produto.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -1052,6 +1120,20 @@ export const swaggerDocument = {
             properties: {
               estoqueCritico: { type: 'boolean', example: true },
               fornecedor: { $ref: '#/components/schemas/ProdutoFornecedorResumo' },
+            },
+          },
+        ],
+      },
+      ProdutoDetalhado: {
+        allOf: [
+          { $ref: '#/components/schemas/FornecedorProduto' },
+          {
+            type: 'object',
+            required: ['fornecedor', 'margemLucroPercentual', 'estoqueCritico'],
+            properties: {
+              fornecedor: { $ref: '#/components/schemas/FornecedorCriado' },
+              margemLucroPercentual: { type: 'number', example: 51.43 },
+              estoqueCritico: { type: 'boolean', example: false },
             },
           },
         ],

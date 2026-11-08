@@ -38,4 +38,11 @@ export class ProdutoRepository {
       orderBy: { nome: 'asc' },
     });
   }
+
+  findByIdWithFornecedor(id: number) {
+    return prisma.produto.findUnique({
+      where: { id },
+      include: { fornecedor: true },
+    });
+  }
 }

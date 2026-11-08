@@ -6,7 +6,10 @@ import { listarProdutosQuerySchema, type CriarProdutoInput } from '../schemas/pr
 
 export class ProdutoService {
   constructor(
-    private readonly produtoRepository: Pick<ProdutoRepository, 'findBySku' | 'create' | 'findAll'> = new ProdutoRepository(),
+    private readonly produtoRepository: Pick<
+      ProdutoRepository,
+      'findBySku' | 'create' | 'findAll' | 'findByIdWithFornecedor'
+    > = new ProdutoRepository(),
     private readonly fornecedorRepository: Pick<FornecedorRepository, 'findById'> = new FornecedorRepository(),
   ) {}
 
@@ -66,5 +69,34 @@ export class ProdutoService {
     }
 
     return comEstoqueCritico;
+  }
+
+  async buscarPorId(id: string) {
+    const produtoId = Number(id);
+
+    if (!Number.isSafeInteger(produtoId) || produtoId <= 0) {
+      throw new AppError('O ID do produto deve ser um número inteiro positivo.', 400);
+    }
+
+    const produto = await this.produtoRepository.findByIdWithFornecedor(produtoId);
+
+    if (!produto) {
+      throw new AppError('Produto não encontrado.', 404);
+    }
+
+    const precoCusto = Number(produto.precoCusto);
+    const precoVenda = Number(produto.precoVenda);
+
+    if (!Number.isFinite(precoCusto) || precoCusto <= 0 || !Number.isFinite(precoVenda)) {
+      throw new AppError('Não foi possível calcular a margem de lucro para este produto.', 422);
+    }
+
+    const margemLucroPercentual = Number((((precoVenda - precoCusto) / precoCusto) * 100).toFixed(2));
+
+    return {
+      ...produto,
+      margemLucroPercentual,
+      estoqueCritico: produto.estoqueAtual <= produto.estoqueMinimo,
+    };
   }
 }

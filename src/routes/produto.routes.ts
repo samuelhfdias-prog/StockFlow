@@ -8,6 +8,7 @@ const produtoRoutes = Router();
 const produtoController = new ProdutoController();
 
 produtoRoutes.get('/', ensureAuthenticated, produtoController.listar);
+produtoRoutes.get('/:id', ensureAuthenticated, produtoController.buscarPorId);
 produtoRoutes.post('/', ensureAuthenticated, validateBody(criarProdutoSchema), produtoController.criar);
 
 export default produtoRoutes;

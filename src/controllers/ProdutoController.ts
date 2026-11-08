@@ -17,4 +17,9 @@ export class ProdutoController {
     });
     res.status(200).json(produtos);
   };
+
+  buscarPorId: RequestHandler<{ id: string }> = async (req, res) => {
+    const produto = await this.produtoService.buscarPorId(req.params.id);
+    res.status(200).json(produto);
+  };
 }
