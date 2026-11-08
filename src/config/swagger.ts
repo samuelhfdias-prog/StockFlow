@@ -6,6 +6,77 @@ export const swaggerDocument = {
     description: 'API de gestão de estoque e pedidos comerciais atacadistas.',
   },
   paths: {
+    '/clientes': {
+      post: {
+        tags: ['Clientes'],
+        summary: 'Cadastrar cliente',
+        description: 'Cadastra um cliente atacadista. Requer um Bearer token válido.',
+        operationId: 'criarCliente',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CriarClienteRequest' },
+              example: {
+                razaoSocial: 'Distribuidora Exemplo Ltda.',
+                cnpj: '12.345.678/0001-90',
+                email: 'compras@example.com',
+                telefone: '(11) 99999-9999',
+                limiteCredito: 15000,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Cliente criado com limite de crédito inicial.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ClienteCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'Payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Já existe um cliente com o CNPJ ou e-mail informado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -144,6 +215,35 @@ export const swaggerDocument = {
       },
     },
     schemas: {
+      CriarClienteRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['razaoSocial', 'cnpj', 'email', 'telefone', 'limiteCredito'],
+        properties: {
+          razaoSocial: { type: 'string', minLength: 1, example: 'Distribuidora Exemplo Ltda.' },
+          cnpj: {
+            type: 'string',
+            pattern: '^(?:\\d{14}|\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})$',
+            example: '12.345.678/0001-90',
+          },
+          email: { type: 'string', format: 'email', example: 'compras@example.com' },
+          telefone: { type: 'string', example: '(11) 99999-9999' },
+          limiteCredito: { type: 'number', exclusiveMinimum: 0, example: 15000 },
+        },
+      },
+      ClienteCriado: {
+        type: 'object',
+        required: ['id', 'razaoSocial', 'cnpj', 'email', 'telefone', 'limiteCredito', 'ativo'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          razaoSocial: { type: 'string', example: 'Distribuidora Exemplo Ltda.' },
+          cnpj: { type: 'string', example: '12345678000190' },
+          email: { type: 'string', format: 'email', example: 'compras@example.com' },
+          telefone: { type: 'string', example: '(11) 99999-9999' },
+          limiteCredito: { type: 'number', example: 15000 },
+          ativo: { type: 'boolean', example: true },
+        },
+      },
       LoginRequest: {
         type: 'object',
         additionalProperties: false,

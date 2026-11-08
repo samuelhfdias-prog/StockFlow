@@ -35,4 +35,4 @@ Repository initialization.
 
 Use uma conta MySQL dedicada e com privilégios mínimos fora do ambiente local de demonstração. Nunca versione o arquivo `.env` nem compartilhe sua senha.
 
-O Swagger está inicializado e documenta os endpoints de autenticação em `/api-docs/`.
+O Swagger está inicializado e documenta os endpoints implementados em `/api-docs/`.
