@@ -9,4 +9,9 @@ export class FornecedorController {
     const fornecedor = await this.fornecedorService.criar(req.body);
     res.status(201).json(fornecedor);
   };
+
+  listar: RequestHandler = async (_req, res) => {
+    const fornecedores = await this.fornecedorService.listar();
+    res.status(200).json(fornecedores);
+  };
 }

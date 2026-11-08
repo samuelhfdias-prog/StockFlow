@@ -14,4 +14,15 @@ export class FornecedorRepository {
       data: { ...data, ativo: true },
     });
   }
+
+  findAll() {
+    return prisma.fornecedor.findMany({
+      include: {
+        _count: {
+          select: { produtos: true },
+        },
+      },
+      orderBy: { nomeFantasia: 'asc' },
+    });
+  }
 }

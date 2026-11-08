@@ -7,6 +7,7 @@ import { criarFornecedorSchema } from '../schemas/fornecedor.schema';
 const fornecedorRoutes = Router();
 const fornecedorController = new FornecedorController();
 
+fornecedorRoutes.get('/', ensureAuthenticated, fornecedorController.listar);
 fornecedorRoutes.post('/', ensureAuthenticated, validateBody(criarFornecedorSchema), fornecedorController.criar);
 
 export default fornecedorRoutes;

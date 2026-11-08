@@ -5,7 +5,7 @@ import type { CriarFornecedorInput } from '../schemas/fornecedor.schema';
 
 export class FornecedorService {
   constructor(
-    private readonly fornecedorRepository: Pick<FornecedorRepository, 'findByCnpj' | 'create'> = new FornecedorRepository(),
+    private readonly fornecedorRepository: Pick<FornecedorRepository, 'findByCnpj' | 'create' | 'findAll'> = new FornecedorRepository(),
   ) {}
 
   async criar(input: CriarFornecedorInput) {
@@ -24,5 +24,9 @@ export class FornecedorService {
 
       throw error;
     }
+  }
+
+  listar() {
+    return this.fornecedorRepository.findAll();
   }
 }

@@ -343,6 +343,42 @@ export const swaggerDocument = {
       },
     },
     '/fornecedores': {
+      get: {
+        tags: ['Fornecedores'],
+        summary: 'Listar fornecedores',
+        description: 'Lista fornecedores homologados e a quantidade de produtos vinculados a cada um. Requer um Bearer token válido.',
+        operationId: 'listarFornecedores',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Lista de fornecedores com contagem de produtos.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/FornecedorListado' },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
       post: {
         tags: ['Fornecedores'],
         summary: 'Cadastrar fornecedor',
@@ -576,6 +612,24 @@ export const swaggerDocument = {
           prazoEntrega: { type: 'integer', example: 7 },
           ativo: { type: 'boolean', example: true },
         },
+      },
+      FornecedorListado: {
+        allOf: [
+          { $ref: '#/components/schemas/FornecedorCriado' },
+          {
+            type: 'object',
+            required: ['_count'],
+            properties: {
+              _count: {
+                type: 'object',
+                required: ['produtos'],
+                properties: {
+                  produtos: { type: 'integer', minimum: 0, example: 12 },
+                },
+              },
+            },
+          },
+        ],
       },
       CriarClienteRequest: {
         type: 'object',
