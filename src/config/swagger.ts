@@ -646,6 +646,66 @@ export const swaggerDocument = {
       },
     },
     '/produtos': {
+      get: {
+        tags: ['Produtos'],
+        summary: 'Listar produtos',
+        description: 'Lista produtos com os dados básicos do fornecedor, podendo filtrar por fornecedor e estoque crítico. Requer um Bearer token válido.',
+        operationId: 'listarProdutos',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'fornecedorId',
+            in: 'query',
+            required: false,
+            description: 'Filtra pelo ID positivo do fornecedor.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+          {
+            name: 'estoqueCritico',
+            in: 'query',
+            required: false,
+            description: 'Quando true, retorna somente produtos com estoque atual menor ou igual ao mínimo.',
+            schema: { type: 'boolean' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Produtos e indicação calculada de estoque crítico.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ProdutoListado' },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Filtros de consulta inválidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
       post: {
         tags: ['Produtos'],
         summary: 'Cadastrar produto',
@@ -982,6 +1042,29 @@ export const swaggerDocument = {
       },
       ProdutoCriado: {
         $ref: '#/components/schemas/FornecedorProduto',
+      },
+      ProdutoListado: {
+        allOf: [
+          { $ref: '#/components/schemas/FornecedorProduto' },
+          {
+            type: 'object',
+            required: ['estoqueCritico', 'fornecedor'],
+            properties: {
+              estoqueCritico: { type: 'boolean', example: true },
+              fornecedor: { $ref: '#/components/schemas/ProdutoFornecedorResumo' },
+            },
+          },
+        ],
+      },
+      ProdutoFornecedorResumo: {
+        type: 'object',
+        required: ['id', 'nomeFantasia', 'cnpj', 'ativo'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          nomeFantasia: { type: 'string', example: 'Distribuidora Parceira' },
+          cnpj: { type: 'string', example: '12345678000190' },
+          ativo: { type: 'boolean', example: true },
+        },
       },
       CriarClienteRequest: {
         type: 'object',

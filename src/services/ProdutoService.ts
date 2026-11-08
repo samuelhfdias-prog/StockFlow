@@ -2,11 +2,11 @@ import { Prisma } from '../generated/prisma/client';
 import { AppError } from '../errors/AppError';
 import { FornecedorRepository } from '../repositories/FornecedorRepository';
 import { ProdutoRepository } from '../repositories/ProdutoRepository';
-import type { CriarProdutoInput } from '../schemas/produto.schema';
+import { listarProdutosQuerySchema, type CriarProdutoInput } from '../schemas/produto.schema';
 
 export class ProdutoService {
   constructor(
-    private readonly produtoRepository: Pick<ProdutoRepository, 'findBySku' | 'create'> = new ProdutoRepository(),
+    private readonly produtoRepository: Pick<ProdutoRepository, 'findBySku' | 'create' | 'findAll'> = new ProdutoRepository(),
     private readonly fornecedorRepository: Pick<FornecedorRepository, 'findById'> = new FornecedorRepository(),
   ) {}
 
@@ -46,5 +46,25 @@ export class ProdutoService {
 
       throw error;
     }
+  }
+
+  async listar(query: { fornecedorId?: unknown; estoqueCritico?: unknown }) {
+    const resultado = listarProdutosQuerySchema.safeParse(query);
+
+    if (!resultado.success) {
+      throw new AppError('Filtros de consulta inválidos.', 400);
+    }
+
+    const produtos = await this.produtoRepository.findAll(resultado.data.fornecedorId);
+    const comEstoqueCritico = produtos.map((produto) => ({
+      ...produto,
+      estoqueCritico: produto.estoqueAtual <= produto.estoqueMinimo,
+    }));
+
+    if (resultado.data.estoqueCritico === true) {
+      return comEstoqueCritico.filter((produto) => produto.estoqueCritico);
+    }
+
+    return comEstoqueCritico;
   }
 }

@@ -1,5 +1,5 @@
 import { prisma } from '../database/prisma';
-import type { Produto } from '../generated/prisma/client';
+import type { Produto, Prisma } from '../generated/prisma/client';
 import type { CriarProdutoInput } from '../schemas/produto.schema';
 
 type NovoProduto = Pick<
@@ -14,5 +14,28 @@ export class ProdutoRepository {
 
   create(data: NovoProduto): Promise<Produto> {
     return prisma.produto.create({ data });
+  }
+
+  findAll(fornecedorId?: number) {
+    const where: Prisma.ProdutoWhereInput = {};
+
+    if (fornecedorId !== undefined) {
+      where.fornecedorId = fornecedorId;
+    }
+
+    return prisma.produto.findMany({
+      where,
+      include: {
+        fornecedor: {
+          select: {
+            id: true,
+            nomeFantasia: true,
+            cnpj: true,
+            ativo: true,
+          },
+        },
+      },
+      orderBy: { nome: 'asc' },
+    });
   }
 }

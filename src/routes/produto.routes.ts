@@ -7,6 +7,7 @@ import { criarProdutoSchema } from '../schemas/produto.schema';
 const produtoRoutes = Router();
 const produtoController = new ProdutoController();
 
+produtoRoutes.get('/', ensureAuthenticated, produtoController.listar);
 produtoRoutes.post('/', ensureAuthenticated, validateBody(criarProdutoSchema), produtoController.criar);
 
 export default produtoRoutes;

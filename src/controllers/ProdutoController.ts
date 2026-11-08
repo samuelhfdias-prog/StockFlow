@@ -9,4 +9,12 @@ export class ProdutoController {
     const produto = await this.produtoService.criar(req.body);
     res.status(201).json(produto);
   };
+
+  listar: RequestHandler = async (req, res) => {
+    const produtos = await this.produtoService.listar({
+      fornecedorId: req.query.fornecedorId,
+      estoqueCritico: req.query.estoqueCritico,
+    });
+    res.status(200).json(produtos);
+  };
 }

@@ -11,3 +11,15 @@ export const criarProdutoSchema = z.object({
 }).strict();
 
 export type CriarProdutoInput = z.infer<typeof criarProdutoSchema>;
+
+export const listarProdutosQuerySchema = z.object({
+  fornecedorId: z.string()
+    .regex(/^[1-9]\d*$/, 'O ID do fornecedor deve ser um inteiro positivo.')
+    .transform(Number)
+    .optional(),
+  estoqueCritico: z.enum(['true', 'false'])
+    .transform((valor) => valor === 'true')
+    .optional(),
+}).strict();
+
+export type ListarProdutosFiltros = z.infer<typeof listarProdutosQuerySchema>;
