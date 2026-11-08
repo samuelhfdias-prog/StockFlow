@@ -342,6 +342,76 @@ export const swaggerDocument = {
         },
       },
     },
+    '/fornecedores': {
+      post: {
+        tags: ['Fornecedores'],
+        summary: 'Cadastrar fornecedor',
+        description: 'Homologa e ativa um fornecedor no catálogo. Requer um Bearer token válido.',
+        operationId: 'criarFornecedor',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CriarFornecedorRequest' },
+              example: {
+                nomeFantasia: 'Distribuidora Parceira',
+                cnpj: '12.345.678/0001-90',
+                emailContato: 'contato@example.com',
+                prazoEntrega: 7,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Fornecedor homologado e ativo.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FornecedorCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'Payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'Já existe um fornecedor com o CNPJ informado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -480,6 +550,33 @@ export const swaggerDocument = {
       },
     },
     schemas: {
+      CriarFornecedorRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['nomeFantasia', 'cnpj', 'emailContato', 'prazoEntrega'],
+        properties: {
+          nomeFantasia: { type: 'string', minLength: 1, example: 'Distribuidora Parceira' },
+          cnpj: {
+            type: 'string',
+            pattern: '^(?:\\d{14}|\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})$',
+            example: '12.345.678/0001-90',
+          },
+          emailContato: { type: 'string', format: 'email', example: 'contato@example.com' },
+          prazoEntrega: { type: 'integer', minimum: 1, description: 'Prazo médio em dias.', example: 7 },
+        },
+      },
+      FornecedorCriado: {
+        type: 'object',
+        required: ['id', 'nomeFantasia', 'cnpj', 'emailContato', 'prazoEntrega', 'ativo'],
+        properties: {
+          id: { type: 'integer', example: 1 },
+          nomeFantasia: { type: 'string', example: 'Distribuidora Parceira' },
+          cnpj: { type: 'string', example: '12345678000190' },
+          emailContato: { type: 'string', format: 'email', example: 'contato@example.com' },
+          prazoEntrega: { type: 'integer', example: 7 },
+          ativo: { type: 'boolean', example: true },
+        },
+      },
       CriarClienteRequest: {
         type: 'object',
         additionalProperties: false,
