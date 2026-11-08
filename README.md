@@ -1,156 +1,223 @@
 # StockFlow B2B API
 
-API REST para gestão de estoque e pedidos comerciais atacadistas. O sistema mantém clientes, fornecedores, produtos, pedidos e seus itens, aplicando regras de crédito, disponibilidade de estoque, descontos por volume e histórico comercial.
+Aplicação Full-Stack para gestão de estoque e pedidos comerciais atacadistas. A API concentra autenticação, cadastros, catálogo, crédito e processamento transacional de pedidos; a interface web permite que a equipe execute esses fluxos em um único painel.
 
 ## Tecnologias
 
-- Node.js e TypeScript
-- Express 5
-- Prisma ORM 7 com MySQL/MariaDB
-- Zod para validação de payloads e filtros
-- JWT para autenticação Bearer e bcryptjs para hashes de senha
-- Helmet e CORS para proteções HTTP básicas
-- Swagger UI em `/api-docs/`
+### API
+
+- Node.js 22, TypeScript e Express 5
+- Prisma ORM 7 com MySQL/MariaDB e adapter `@prisma/adapter-mariadb`
+- Zod 4, JWT e bcryptjs
+- Helmet, CORS e Swagger UI
+- Vitest e Supertest para testes sem acesso ao banco
+
+### Interface web
+
+- React 19, Vite 7 e TypeScript em modo estrito
+- TailwindCSS e Lucide React
+- React Router
+
+### Operação
+
+- Docker e Docker Compose
+- MySQL fornecido pela máquina host; o Compose não inicia um segundo banco
 
 ## Arquitetura
 
-O código é separado por responsabilidade:
+A API está organizada por responsabilidade:
 
-- `src/routes/`: mapeia método e caminho HTTP e compõe middlewares/controllers.
-- `src/middlewares/`: autentica JWT, valida corpo com Zod e trata erros globais.
-- `src/controllers/`: extrai dados da requisição e define a resposta/status HTTP.
-- `src/services/`: aplica as regras de negócio e coordena as operações.
-- `src/repositories/`: encapsula consultas e gravações do Prisma. Transações de negócio complexas ficam nos services.
-- `src/schemas/`: define contratos e validações de entrada usando Zod.
-- `src/errors/`: contém `AppError`, que associa uma mensagem a um status HTTP.
-- `src/database/`: instancia o Prisma Client com o adapter MySQL.
-- `prisma/schema.prisma`: define os seis modelos relacionais e mapeia tabelas/colunas para snake_case.
+- `src/routes/`: caminhos HTTP e composição de middlewares/controllers.
+- `src/middlewares/`: autenticação Bearer JWT, validação Zod e tratamento global de erros.
+- `src/controllers/`: extração de parâmetros/body e respostas HTTP.
+- `src/services/`: regras de negócio e coordenação das operações.
+- `src/repositories/`: acesso ao Prisma/MySQL.
+- `src/schemas/`: contratos e validações Zod.
+- `src/database/`: configuração do Prisma Client e adapter MySQL.
+- `prisma/schema.prisma`: seis modelos relacionais com mapeamento snake_case.
+- `frontend/src/tipos/`: contratos TypeScript usados pela interface.
+- `frontend/src/servicos/api.ts`: chamadas autenticadas à API e tratamento de erros.
+- `frontend/src/contextos/`: estado da sessão e usuário autenticado.
+- `frontend/src/paginas/` e `frontend/src/componentes/`: telas e elementos reutilizáveis.
 
-O `errorHandler`, registrado depois das rotas em `src/app.ts`, converte `AppError` em respostas com o status apropriado, erros Zod e JSON inválido em HTTP 400, e demais falhas em HTTP 500 sem expor detalhes internos.
+Controllers não acessam o Prisma. Para operações que precisam alterar várias tabelas de forma indivisível, `PedidoService` executa as leituras e gravações dentro de `prisma.$transaction`.
 
-## Instalação e configuração local
+## Pré-requisitos
 
-Requisitos: Node.js compatível com as dependências do projeto e MySQL/MariaDB disponível.
+- Node.js 22 ou compatível com as versões instaladas.
+- MySQL/MariaDB acessível em `127.0.0.1:3306`.
+- Database `stockflow` criado no servidor MySQL.
+- Para execução em containers: Docker Engine/Desktop com Docker Compose disponível.
 
-1. Crie o database:
+O serviço MySQL deve estar iniciado antes de usar a API. Em execução via Docker, `host.docker.internal` aponta para a máquina host.
 
-   ```sql
-   CREATE DATABASE stockflow;
+## Execução local
+
+### 1. Configure o banco e variáveis
+
+Crie o database no MySQL:
+
+```sql
+CREATE DATABASE stockflow;
+```
+
+Copie `.env.example` para `.env` e ajuste as credenciais:
+
+```env
+DATABASE_URL="mysql://root:SUA_SENHA@127.0.0.1:3306/stockflow"
+PORT=3000
+HOST=127.0.0.1
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080
+JWT_SECRET="SEGREDO_ALEATORIO_COM_PELO_MENOS_32_BYTES"
+```
+
+Gere um segredo JWT local aleatório:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+O `.env` não é versionado. Nunca publique senhas ou segredos. Caracteres especiais da senha MySQL precisam estar em URL encoding. A URL sem senha `mysql://root@127.0.0.1:3306/stockflow` é aceita se a conta local realmente usar senha vazia.
+
+### 2. Instale e inicialize a API
+
+```powershell
+npm install
+npm run prisma:generate
+npx prisma migrate dev --name init --config=prisma7.config.ts
+npm run dev
+```
+
+`npm run dev` inicia a API e abre o Swagger em `http://127.0.0.1:3000/api-docs/`. A interface web pode ser iniciada em outro terminal:
+
+```powershell
+Set-Location frontend
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+Vite estará em `http://localhost:5173`. A variável `VITE_API_URL` pode apontar para outra URL, mas seu valor é incorporado ao bundle do navegador.
+
+### 3. Primeiro acesso e dados de demonstração
+
+O projeto não inclui um seed automático. Para iniciar sem inserir credenciais administrativas no código:
+
+1. Use `POST /auth/registrar` no Swagger para criar um operador.
+2. Entre em `POST /auth/login` ou na tela `/login`.
+3. Use a interface ou o Swagger autorizado para criar fornecedores, clientes e produtos.
+4. A tela de pedidos permite simular descontos, confirmar limite disponível e visualizar alertas de ressuprimento.
+
+O registro público cria apenas `OPERADOR`; a criação de administradores deve ser provisionada por um fluxo controlado.
+
+## Testes e builds
+
+Os testes da API usam mocks/repositórios em memória e não conectam nem gravam no MySQL:
+
+```powershell
+npm run prisma:generate
+npm run build
+npm test
+```
+
+O comando `npm test` executa verificação de tipos dos testes e a suíte Vitest. Para compilar o front:
+
+```powershell
+Set-Location frontend
+npm run build
+```
+
+## Execução com Docker
+
+1. Garanta que o MySQL da máquina host esteja ativo e que o database `stockflow` exista.
+2. Configure `.env` na raiz com `JWT_SECRET`. Para MySQL sem senha, o Compose usa:
+
+   ```text
+   mysql://root@host.docker.internal:3306/stockflow
    ```
 
-2. Copie `.env.example` para `.env` e configure `DATABASE_URL` com usuário, senha, host, porta e database. Exemplo local:
+   Se o usuário root tiver senha, configure `DATABASE_URL_DOCKER` no `.env`, por exemplo:
 
    ```env
-   DATABASE_URL="mysql://root:SUA_SENHA@127.0.0.1:3306/stockflow"
-   PORT=3000
-   HOST=127.0.0.1
-   CORS_ORIGINS=http://localhost:3000
-   JWT_SECRET="SEGREDO_ALEATORIO_COM_PELO_MENOS_32_BYTES"
+   DATABASE_URL_DOCKER="mysql://root:SUA_SENHA@host.docker.internal:3306/stockflow"
    ```
 
-   Gere um segredo JWT para desenvolvimento:
+3. Sincronize o schema do banco host a partir da máquina:
 
    ```powershell
-   node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
-   ```
-
-   Copie o valor gerado para `JWT_SECRET`. O valor de exemplo de `.env.example` é um placeholder e não permite iniciar a configuração JWT. Codifique caracteres especiais da senha do MySQL em URL encoding. O `.env` é ignorado pelo Git; não compartilhe nem versione credenciais.
-
-3. Instale dependências, gere o cliente Prisma e crie/aplique a migration inicial:
-
-   ```powershell
-   npm install
    npm run prisma:generate
-   npx prisma migrate dev --name init
-   ```
-
-   Para sincronização rápida em banco de desenvolvimento sem criar migration, existe também:
-
-   ```powershell
    npm run db:push
    ```
 
-   Use migrations versionadas nos fluxos compartilhados e de produção; `db:push` é uma conveniência para desenvolvimento local.
-
-4. Inicie a API:
+4. Construa e inicie API e interface:
 
    ```powershell
-   npm run dev
+   docker compose up --build
    ```
 
-   O servidor de desenvolvimento abre o Swagger automaticamente em `http://127.0.0.1:3000/api-docs/`. Para compilar e executar o build:
+5. Acesse:
+   - Front-end: `http://localhost:8080`
+   - API: `http://localhost:3000`
+   - Swagger: `http://localhost:3000/api-docs/`
 
-   ```powershell
-   npm run build
-   npm start
-   ```
+O container da API usa `HOST=0.0.0.0`, `PORT=3000` e `OPEN_SWAGGER=false`. O front-end é servido pelo Nginx com fallback de SPA. O Compose publica apenas a API e o front; o MySQL continua sendo o servidor da máquina host.
 
-### Seed e primeiro acesso
+Para encerrar:
 
-O repositório não possui um script de seed automático. Para preparar dados de demonstração, use o Swagger:
-
-1. Chame `POST /auth/registrar` para criar o primeiro usuário `OPERADOR`.
-2. Faça login em `POST /auth/login` e use o token retornado no botão **Authorize** do Swagger.
-3. Crie um fornecedor com `POST /fornecedores` e um cliente com `POST /clientes`.
-4. Crie produtos vinculados ao fornecedor ativo usando `POST /produtos`.
-5. Use esses registros para testar consultas e pedidos.
-
-O cadastro público não permite criar `ADMIN`; a criação de contas administrativas requer um fluxo de provisionamento controlado, fora da rota pública.
+```powershell
+docker compose down
+```
 
 ## Endpoints REST
 
-Rotas marcadas como protegidas exigem `Authorization: Bearer <token>`. Os detalhes de payloads, parâmetros e respostas estão no Swagger.
+As rotas abaixo são protegidas por `Authorization: Bearer <JWT>`, salvo os endpoints de login e registro. Os contratos completos e exemplos estão no Swagger.
 
-| # | Método e rota | Acesso | Descrição |
-|---:|---|---|---|
-| 01 | `POST /auth/registrar` | Público | Cadastra usuário operador, valida e-mail e grava senha com bcrypt. |
-| 02 | `POST /auth/login` | Público | Valida credenciais e emite JWT com validade de 8 horas. |
-| 03 | `POST /clientes` | Protegido | Cadastra cliente B2B e limite de crédito inicial; CNPJ/e-mail são únicos. |
-| 04 | `GET /clientes` | Protegido | Lista clientes com filtros opcionais `ativo` e `razaoSocial`. |
-| 05 | `GET /clientes/:id` | Protegido | Consulta cliente e resumo dos pedidos vinculados. |
-| 06 | `PUT /clientes/:id` | Protegido | Atualiza dados, status e limite, mantendo unicidade de CNPJ/e-mail. |
-| 07 | `DELETE /clientes/:id` | Protegido | Exclui apenas cliente sem pedidos; cadastro com histórico deve ser inativado. |
-| 08 | `POST /fornecedores` | Protegido | Homologa fornecedor com CNPJ único e prazo de entrega em dias. |
-| 09 | `GET /fornecedores` | Protegido | Lista fornecedores com contagem de produtos em `_count.produtos`. |
-| 10 | `GET /fornecedores/:id` | Protegido | Consulta fornecedor e produtos vinculados. |
-| 11 | `PUT /fornecedores/:id` | Protegido | Atualiza contato, prazo de entrega e situação ativa. |
-| 12 | `DELETE /fornecedores/:id` | Protegido | Exclui somente fornecedor sem produtos vinculados. |
-| 13 | `POST /produtos` | Protegido | Cadastra produto com SKU único, margem positiva e fornecedor ativo. |
-| 14 | `GET /produtos` | Protegido | Lista produtos, filtra por `fornecedorId` e/ou `estoqueCritico=true`. |
-| 15 | `GET /produtos/:id` | Protegido | Consulta produto, fornecedor, margem percentual e estoque crítico. |
-| 16 | `PUT /produtos/:id` | Protegido | Atualiza dados do produto, preservando SKU e margem válida. |
-| 17 | `DELETE /produtos/:id` | Protegido | Exclui apenas produto sem vínculo com itens de pedidos. |
-| 18 | `POST /pedidos` | Protegido | Processa pedido em transação: valida cliente, estoque e crédito, calcula desconto, baixa saldo e emite alertas. |
-| 19 | `GET /pedidos/:id` | Protegido | Consulta espelho financeiro, cliente e itens com SKU/nome. |
-| 20 | `PATCH /pedidos/:id/cancelar` | Protegido | Cancela pedido aprovado e estorna estoque e crédito em transação. |
+| # | Método e rota | Descrição |
+|---:|---|---|
+| 01 | `POST /auth/registrar` | Cadastra operador e armazena hash bcrypt. |
+| 02 | `POST /auth/login` | Valida credenciais e emite JWT de 8 horas. |
+| — | `GET /auth/me` | Retorna os dados básicos da sessão autenticada. |
+| 03 | `POST /clientes` | Cadastra cliente e limite de crédito inicial. |
+| 04 | `GET /clientes` | Lista clientes com filtros `ativo` e `razaoSocial`. |
+| 05 | `GET /clientes/:id` | Consulta cliente e resumo de pedidos. |
+| 06 | `PUT /clientes/:id` | Atualiza cadastro, status e crédito. |
+| 07 | `DELETE /clientes/:id` | Exclui apenas clientes sem pedidos. |
+| 08 | `POST /fornecedores` | Homologa fornecedor com CNPJ único. |
+| 09 | `GET /fornecedores` | Lista fornecedores com contagem de produtos. |
+| 10 | `GET /fornecedores/:id` | Consulta fornecedor e catálogo vinculado. |
+| 11 | `PUT /fornecedores/:id` | Atualiza contato, prazo e status. |
+| 12 | `DELETE /fornecedores/:id` | Exclui somente fornecedor sem produtos. |
+| 13 | `POST /produtos` | Cadastra produto com margem positiva e fornecedor ativo. |
+| 14 | `GET /produtos` | Lista produtos por fornecedor e estoque crítico. |
+| 15 | `GET /produtos/:id` | Consulta ficha, margem e sinalização de estoque. |
+| 16 | `PUT /produtos/:id` | Atualiza produto validando SKU e margem. |
+| 17 | `DELETE /produtos/:id` | Impede excluir produto presente no histórico de pedidos. |
+| 18 | `POST /pedidos` | Processa pedido, descontos, estoque, crédito e alertas. |
+| 19 | `GET /pedidos/:id` | Retorna espelho financeiro, cliente e itens. |
+| 20 | `PATCH /pedidos/:id/cancelar` | Cancela pedido aprovado e estorna estoque/crédito. |
 
-## Regras de negócio transacionais
+## Regras comerciais transacionais
 
-### Criação de pedidos — `POST /pedidos`
+### Criação de pedido
 
-O pedido deve conter cliente e ao menos um item com produto e quantidade inteira positiva. O service executa as etapas abaixo dentro de `prisma.$transaction`:
+`POST /pedidos` executa todas as etapas em uma transação atômica: valida cliente ativo; carrega produtos em lote; agrega linhas duplicadas do mesmo produto para conferir saldo; calcula preços e desconto progressivo; confirma crédito disponível; baixa estoque e limite com atualizações condicionais; grava pedido/itens; e retorna alertas quando o saldo pós-venda fica menor ou igual ao mínimo. Qualquer falha reverte todas as alterações.
 
-1. Busca o cliente; cliente ausente retorna 404 e cliente inativo retorna 403.
-2. Busca os produtos em lote e agrega quantidades repetidas do mesmo produto para conferir saldo total. Produto ausente retorna 404; estoque insuficiente retorna 422 identificando o SKU.
-3. Calcula o valor bruto com o preço de venda registrado para cada produto e aplica o desconto progressivo:
-   - 10% se o volume total for pelo menos 30 unidades **ou** o valor bruto superar R$ 7.000.
-   - Caso contrário, 5% se o volume for pelo menos 10 unidades **ou** o valor bruto superar R$ 2.500.
-   - Caso contrário, não há desconto.
-4. Compara o valor líquido com o crédito disponível do cliente; insuficiência retorna 422.
-5. Baixa o estoque com atualização condicional de saldo e reduz o crédito disponível, também de forma condicional, protegendo contra compras concorrentes.
-6. Grava pedido aprovado e itens com preço/subtotal faturado. Produtos que atingem ou ficam abaixo do estoque mínimo geram alerta com SKU, nome, saldo, fornecedor e prazo de entrega.
+Descontos:
 
-Qualquer erro aborta a transação: pedido, itens, estoque e crédito permanecem sem alterações parciais.
+- 10% se o pedido tiver pelo menos 30 unidades ou valor bruto acima de R$ 7.000.
+- Caso contrário, 5% se tiver pelo menos 10 unidades ou valor bruto acima de R$ 2.500.
+- Caso contrário, sem desconto.
 
-### Cancelamento — `PATCH /pedidos/:id/cancelar`
+Valores monetários são calculados com `Prisma.Decimal`; a API converte os objetos Decimal em números JSON no middleware de serialização.
 
-Somente pedidos em `APROVADO` podem ser cancelados. A transação altera condicionalmente o status para `CANCELADO`, devolve as quantidades dos itens ao estoque e recompõe no cliente o valor líquido faturado. O status condicional impede dois cancelamentos simultâneos de realizarem estornos duplicados. Se qualquer atualização falhar, toda a transação é revertida. Um pedido já cancelado retorna 409.
+### Cancelamento de pedido
 
-## Segurança e execução
+`PATCH /pedidos/:id/cancelar` só permite pedidos `APROVADO`. Dentro de outra transação, muda o status condicionalmente para impedir estorno duplicado, devolve as quantidades ao estoque e recompõe o crédito pelo valor líquido faturado. Um erro em qualquer etapa desfaz status, estoque e crédito juntos.
 
-- Senhas são armazenadas como hashes bcrypt, não em texto puro.
-- `JWT_SECRET` é obrigatório e deve ser privado e aleatório; o token contém somente claims necessárias à autenticação.
-- CORS usa a lista `CORS_ORIGINS`; sem origens configuradas, não libera acesso cross-origin.
-- Helmet define cabeçalhos de segurança e o parser JSON tem limite de tamanho.
-- Use conta MySQL com privilégios mínimos fora da máquina de desenvolvimento.
-- Não exponha stack traces, SQL, senhas ou tokens em respostas e logs compartilhados.
+## Segurança e limitações conhecidas
+
+- Use senha MySQL e segredo JWT fortes; não mantenha credenciais reais em `.env.example`.
+- Contas públicas registradas não podem definir cargo `ADMIN`.
+- CORS aceita as origens configuradas em `CORS_ORIGINS`; as quatro origens de desenvolvimento/container vêm como padrão.
+- A aplicação não cria um container MySQL; Docker conecta ao banco que já está rodando na máquina host.
+- Para produção, configure usuário MySQL com privilégios mínimos, HTTPS, segredo JWT próprio e migrations revisadas.
