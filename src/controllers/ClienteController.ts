@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import { ClienteService } from '../services/ClienteService';
-import type { CriarClienteInput } from '../schemas/cliente.schema';
+import type { AtualizarClienteInput, CriarClienteInput } from '../schemas/cliente.schema';
 
 export class ClienteController {
   constructor(private readonly clienteService = new ClienteService()) {}
@@ -20,6 +20,11 @@ export class ClienteController {
 
   buscarPorId: RequestHandler<{ id: string }> = async (req, res) => {
     const cliente = await this.clienteService.buscarPorId(req.params.id);
+    res.status(200).json(cliente);
+  };
+
+  atualizar: RequestHandler<{ id: string }, unknown, AtualizarClienteInput> = async (req, res) => {
+    const cliente = await this.clienteService.atualizar(req.params.id, req.body);
     res.status(200).json(cliente);
   };
 }

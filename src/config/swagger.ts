@@ -196,6 +196,90 @@ export const swaggerDocument = {
           },
         },
       },
+      put: {
+        tags: ['Clientes'],
+        summary: 'Atualizar cliente',
+        description: 'Atualiza os campos informados do cadastro, incluindo status e limite de crédito. Requer um Bearer token válido.',
+        operationId: 'atualizarCliente',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do cliente.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AtualizarClienteRequest' },
+              example: {
+                razaoSocial: 'Distribuidora Exemplo Ltda.',
+                limiteCredito: 20000,
+                ativo: true,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Cadastro do cliente atualizado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ClienteCriado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID ou payload inválido.',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/ErroValidacao' },
+                    { $ref: '#/components/schemas/Erro' },
+                  ],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Cliente não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '409': {
+            description: 'CNPJ ou e-mail já pertence a outro cliente.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {
@@ -349,6 +433,23 @@ export const swaggerDocument = {
           email: { type: 'string', format: 'email', example: 'compras@example.com' },
           telefone: { type: 'string', example: '(11) 99999-9999' },
           limiteCredito: { type: 'number', exclusiveMinimum: 0, example: 15000 },
+        },
+      },
+      AtualizarClienteRequest: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          razaoSocial: { type: 'string', minLength: 1, example: 'Distribuidora Exemplo Ltda.' },
+          cnpj: {
+            type: 'string',
+            pattern: '^(?:\\d{14}|\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})$',
+            example: '12.345.678/0001-90',
+          },
+          email: { type: 'string', format: 'email', example: 'compras@example.com' },
+          telefone: { type: 'string', example: '(11) 99999-9999' },
+          limiteCredito: { type: 'number', exclusiveMinimum: 0, example: 20000 },
+          ativo: { type: 'boolean', example: true },
         },
       },
       ClienteCriado: {
