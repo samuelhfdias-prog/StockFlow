@@ -16,7 +16,7 @@ export type UsuarioRegistrado = {
 
 export class AuthService {
   constructor(
-    private readonly usuarioRepository: Pick<UsuarioRepository, 'findByEmail' | 'create'> = new UsuarioRepository(),
+    private readonly usuarioRepository: Pick<UsuarioRepository, 'findByEmail' | 'findById' | 'create'> = new UsuarioRepository(),
   ) {}
 
   async registrar(input: RegistrarUsuarioInput): Promise<UsuarioRegistrado> {
@@ -81,6 +81,21 @@ export class AuthService {
         email: usuario.email,
         cargo: usuario.cargo,
       },
+    };
+  }
+
+  async me(id: number): Promise<Pick<UsuarioRegistrado, 'id' | 'nome' | 'email' | 'cargo'>> {
+    const usuario = await this.usuarioRepository.findById(id);
+
+    if (!usuario) {
+      throw new AppError('Usuário não encontrado.', 404);
+    }
+
+    return {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      cargo: usuario.cargo,
     };
   }
 }

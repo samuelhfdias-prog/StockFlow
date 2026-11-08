@@ -8,6 +8,10 @@ export class UsuarioRepository {
     return prisma.usuario.findUnique({ where: { email } });
   }
 
+  findById(id: number): Promise<Usuario | null> {
+    return prisma.usuario.findUnique({ where: { id } });
+  }
+
   create(data: NovoUsuario): Promise<Usuario> {
     return prisma.usuario.create({ data });
   }

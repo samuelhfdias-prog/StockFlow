@@ -1008,6 +1008,66 @@ export const swaggerDocument = {
       },
     },
     '/pedidos': {
+      get: {
+        tags: ['Pedidos'],
+        summary: 'Listar pedidos',
+        description: 'Lista pedidos por data de criação decrescente, com resumo do cliente e itens. Requer um Bearer token válido.',
+        operationId: 'listarPedidos',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            description: 'Filtra pelo status do pedido.',
+            schema: { type: 'string', enum: ['APROVADO', 'CANCELADO'] },
+          },
+          {
+            name: 'clienteId',
+            in: 'query',
+            required: false,
+            description: 'Filtra pelo ID positivo do cliente.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Pedidos ordenados do mais recente para o mais antigo.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/PedidoListado' },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Filtros inválidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
       post: {
         tags: ['Pedidos'],
         summary: 'Criar pedido comercial',
@@ -1205,6 +1265,49 @@ export const swaggerDocument = {
           },
           '409': {
             description: 'Pedido já cancelado ou não está aprovado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/auth/me': {
+      get: {
+        tags: ['Autenticação'],
+        summary: 'Consultar sessão atual',
+        description: 'Retorna os dados básicos do usuário associado ao Bearer token.',
+        operationId: 'consultarUsuarioAutenticado',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Dados básicos do usuário autenticado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UsuarioAutenticado' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Usuário associado ao token não encontrado.',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Erro' },
@@ -1531,6 +1634,32 @@ export const swaggerDocument = {
           valorLiquido: { type: 'number', example: 7380 },
           criadoEm: { type: 'string', format: 'date-time' },
           cliente: { $ref: '#/components/schemas/PedidoCliente' },
+          itensPedido: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/PedidoItemDetalhado' },
+          },
+        },
+      },
+      PedidoListado: {
+        type: 'object',
+        required: ['id', 'clienteId', 'status', 'valorBruto', 'valorDesconto', 'valorLiquido', 'criadoEm', 'cliente', 'itensPedido'],
+        properties: {
+          id: { type: 'integer', example: 25 },
+          clienteId: { type: 'integer', example: 1 },
+          status: { type: 'string', enum: ['APROVADO', 'CANCELADO'] },
+          valorBruto: { type: 'number', example: 8200 },
+          valorDesconto: { type: 'number', example: 820 },
+          valorLiquido: { type: 'number', example: 7380 },
+          criadoEm: { type: 'string', format: 'date-time' },
+          cliente: {
+            type: 'object',
+            required: ['id', 'razaoSocial', 'cnpj'],
+            properties: {
+              id: { type: 'integer', example: 1 },
+              razaoSocial: { type: 'string', example: 'Distribuidora Exemplo Ltda.' },
+              cnpj: { type: 'string', example: '12345678000190' },
+            },
+          },
           itensPedido: {
             type: 'array',
             items: { $ref: '#/components/schemas/PedidoItemDetalhado' },
