@@ -7,6 +7,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import authRoutes from './routes/auth.routes';
 import clienteRoutes from './routes/cliente.routes';
 import fornecedorRoutes from './routes/fornecedor.routes';
+import pedidoRoutes from './routes/pedido.routes';
 import produtoRoutes from './routes/produto.routes';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/auth', authRoutes);
 app.use('/clientes', clienteRoutes);
 app.use('/fornecedores', fornecedorRoutes);
 app.use('/produtos', produtoRoutes);
+app.use('/pedidos', pedidoRoutes);
 app.use(errorHandler);
 
 export default app;
