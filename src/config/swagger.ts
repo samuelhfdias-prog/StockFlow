@@ -137,6 +137,66 @@ export const swaggerDocument = {
         },
       },
     },
+    '/clientes/{id}': {
+      get: {
+        tags: ['Clientes'],
+        summary: 'Consultar cliente por ID',
+        description: 'Retorna os dados cadastrais do cliente e o resumo dos pedidos vinculados. Requer um Bearer token válido.',
+        operationId: 'buscarClientePorId',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'ID inteiro positivo do cliente.',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Dados do cliente e resumo dos pedidos.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ClienteDetalhado' },
+              },
+            },
+          },
+          '400': {
+            description: 'ID inválido.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '401': {
+            description: 'Token ausente, inválido ou expirado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '404': {
+            description: 'Cliente não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+          '500': {
+            description: 'Erro interno do servidor.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Erro' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/auth/login': {
       post: {
         tags: ['Autenticação'],
@@ -302,6 +362,31 @@ export const swaggerDocument = {
           telefone: { type: 'string', example: '(11) 99999-9999' },
           limiteCredito: { type: 'number', example: 15000 },
           ativo: { type: 'boolean', example: true },
+        },
+      },
+      ClienteDetalhado: {
+        allOf: [
+          { $ref: '#/components/schemas/ClienteCriado' },
+          {
+            type: 'object',
+            required: ['pedidos'],
+            properties: {
+              pedidos: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/ResumoPedidoCliente' },
+              },
+            },
+          },
+        ],
+      },
+      ResumoPedidoCliente: {
+        type: 'object',
+        required: ['id', 'status', 'valorLiquido', 'criadoEm'],
+        properties: {
+          id: { type: 'integer', example: 10 },
+          status: { type: 'string', example: 'APROVADO' },
+          valorLiquido: { type: 'number', example: 2500.5 },
+          criadoEm: { type: 'string', format: 'date-time' },
         },
       },
       LoginRequest: {

@@ -34,4 +34,21 @@ export class ClienteRepository {
       orderBy: { razaoSocial: 'asc' },
     });
   }
+
+  findByIdWithPedidos(id: number) {
+    return prisma.cliente.findUnique({
+      where: { id },
+      include: {
+        pedidos: {
+          select: {
+            id: true,
+            status: true,
+            valorLiquido: true,
+            criadoEm: true,
+          },
+          orderBy: { criadoEm: 'desc' },
+        },
+      },
+    });
+  }
 }

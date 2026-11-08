@@ -17,4 +17,9 @@ export class ClienteController {
     });
     res.status(200).json(clientes);
   };
+
+  buscarPorId: RequestHandler<{ id: string }> = async (req, res) => {
+    const cliente = await this.clienteService.buscarPorId(req.params.id);
+    res.status(200).json(cliente);
+  };
 }

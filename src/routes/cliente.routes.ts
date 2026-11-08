@@ -8,6 +8,7 @@ const clienteRoutes = Router();
 const clienteController = new ClienteController();
 
 clienteRoutes.get('/', ensureAuthenticated, clienteController.listar);
+clienteRoutes.get('/:id', ensureAuthenticated, clienteController.buscarPorId);
 clienteRoutes.post('/', ensureAuthenticated, validateBody(criarClienteSchema), clienteController.criar);
 
 export default clienteRoutes;

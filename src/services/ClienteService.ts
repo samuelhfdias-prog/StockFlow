@@ -5,7 +5,7 @@ import { listarClientesQuerySchema, type CriarClienteInput } from '../schemas/cl
 
 export class ClienteService {
   constructor(
-    private readonly clienteRepository: Pick<ClienteRepository, 'findByCnpj' | 'findByEmail' | 'create' | 'findAll'> = new ClienteRepository(),
+    private readonly clienteRepository: Pick<ClienteRepository, 'findByCnpj' | 'findByEmail' | 'create' | 'findAll' | 'findByIdWithPedidos'> = new ClienteRepository(),
   ) {}
 
   async criar(input: CriarClienteInput) {
@@ -40,5 +40,21 @@ export class ClienteService {
     }
 
     return this.clienteRepository.findAll(filtros.data);
+  }
+
+  async buscarPorId(id: string) {
+    const clienteId = Number(id);
+
+    if (!Number.isSafeInteger(clienteId) || clienteId <= 0) {
+      throw new AppError('O ID do cliente deve ser um número inteiro positivo.', 400);
+    }
+
+    const cliente = await this.clienteRepository.findByIdWithPedidos(clienteId);
+
+    if (!cliente) {
+      throw new AppError('Cliente não encontrado.', 404);
+    }
+
+    return cliente;
   }
 }
