@@ -1,5 +1,7 @@
 # StockFlow B2B API
 
+Repository initialization.
+
 ## MySQL local
 
 1. Crie o database `stockflow` no MySQL:
@@ -27,4 +29,4 @@
 
 Use uma conta MySQL dedicada e com privilégios mínimos fora do ambiente local de demonstração. Nunca versione o arquivo `.env` nem compartilhe sua senha.
 
-O Swagger está inicializado; as operações da API aparecerão quando seus endpoints forem implementados.
+O Swagger está inicializado e documenta o endpoint de registro em `/api-docs/`.
