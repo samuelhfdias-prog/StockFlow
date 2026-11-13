@@ -1,10 +1,14 @@
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { Prisma } from '../generated/prisma/client';
 import { jwtSecret } from '../config/jwt';
 import { AppError } from '../errors/AppError';
 import { UsuarioRepository } from '../repositories/UsuarioRepository';
 import type { LoginInput, RegistrarUsuarioInput } from '../schemas/auth.schema';
+
+// Usado para gastar o mesmo tempo do bcrypt quando o e-mail não existe, evitando revelar quais e-mails estão cadastrados.
+const hashSemUsuario = bcrypt.hashSync(randomUUID(), 10);
 
 export type UsuarioRegistrado = {
   id: number;
@@ -62,15 +66,16 @@ export class AuthService {
     usuario: Pick<UsuarioRegistrado, 'id' | 'nome' | 'email' | 'cargo'>;
   }> {
     const usuario = await this.usuarioRepository.findByEmail(input.email);
+    const senhaConfere = await bcrypt.compare(input.senha, usuario?.senhaHash ?? hashSemUsuario);
 
-    if (!usuario || !(await bcrypt.compare(input.senha, usuario.senhaHash))) {
+    if (!usuario || !senhaConfere) {
       throw new AppError('E-mail ou senha inválidos.', 401);
     }
 
     const token = jwt.sign(
       { id: usuario.id, cargo: usuario.cargo },
       jwtSecret,
-      { expiresIn: '8h' },
+      { algorithm: 'HS256', expiresIn: '8h' },
     );
 
     return {

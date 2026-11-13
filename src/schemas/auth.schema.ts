@@ -1,11 +1,17 @@
 import { z } from 'zod';
+import { textoObrigatorioSchema } from './comum.schema';
 
-const emailSchema = z.string().trim().pipe(z.email()).transform((email) => email.toLowerCase());
+const emailSchema = z.string().trim().max(191, 'Use no máximo 191 caracteres.').pipe(z.email()).transform((email) => email.toLowerCase());
+
+// O bcrypt considera apenas os primeiros 72 bytes da senha.
+const senhaSchema = z.string()
+  .min(6, 'A senha deve ter pelo menos 6 caracteres.')
+  .refine((senha) => Buffer.byteLength(senha) <= 72, 'A senha deve ter no máximo 72 bytes (caracteres acentuados ocupam mais de um).');
 
 export const registrarUsuarioSchema = z.object({
-  nome: z.string().trim().min(1, 'O nome é obrigatório.'),
+  nome: textoObrigatorioSchema('O nome é obrigatório.'),
   email: emailSchema,
-  senha: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
+  senha: senhaSchema,
   cargo: z.enum(['ADMIN', 'OPERADOR']).optional(),
 }).strict();
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { textoObrigatorioSchema, valorMonetarioSchema } from './comum.schema';
 
 const cnpjSchema = z.string()
   .trim()
@@ -7,32 +8,34 @@ const cnpjSchema = z.string()
 
 const emailSchema = z.string()
   .trim()
+  .max(191, 'Use no máximo 191 caracteres.')
   .pipe(z.email())
   .transform((email) => email.toLowerCase());
 
 const telefoneSchema = z.string()
   .trim()
+  .max(30, 'Use no máximo 30 caracteres no telefone.')
   .refine((telefone) => {
     const digits = telefone.replace(/\D/g, '');
     return /^\+?[\d\s().-]+$/.test(telefone) && digits.length >= 10 && digits.length <= 15;
   }, 'Informe um telefone com 10 a 15 dígitos.');
 
 export const criarClienteSchema = z.object({
-  razaoSocial: z.string().trim().min(1, 'A razão social é obrigatória.'),
+  razaoSocial: textoObrigatorioSchema('A razão social é obrigatória.'),
   cnpj: cnpjSchema,
   email: emailSchema,
   telefone: telefoneSchema,
-  limiteCredito: z.number().finite().positive('O limite de crédito deve ser maior que zero.'),
+  limiteCredito: valorMonetarioSchema('O limite de crédito deve ser maior que zero.'),
 }).strict();
 
 export type CriarClienteInput = z.infer<typeof criarClienteSchema>;
 
 export const atualizarClienteSchema = z.object({
-  razaoSocial: z.string().trim().min(1, 'A razão social é obrigatória.').optional(),
+  razaoSocial: textoObrigatorioSchema('A razão social é obrigatória.').optional(),
   cnpj: cnpjSchema.optional(),
   email: emailSchema.optional(),
   telefone: telefoneSchema.optional(),
-  limiteCredito: z.number().finite().positive('O limite de crédito deve ser maior que zero.').optional(),
+  limiteCredito: valorMonetarioSchema('O limite de crédito deve ser maior que zero.').optional(),
   ativo: z.boolean().optional(),
 }).strict().refine(
   (dados) => Object.values(dados).some((valor) => valor !== undefined),

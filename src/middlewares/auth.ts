@@ -30,7 +30,7 @@ export const ensureAuthenticated: RequestHandler = (req, _res, next) => {
   let payload: string | JwtPayload;
 
   try {
-    payload = jwt.verify(match[1], jwtSecret);
+    payload = jwt.verify(match[1], jwtSecret, { algorithms: ['HS256'] });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       next(new AppError('Token inválido ou expirado.', 401));

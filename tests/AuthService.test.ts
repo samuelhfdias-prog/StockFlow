@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { registrarUsuarioSchema } from '../src/schemas/auth.schema';
 import { AuthService } from '../src/services/AuthService';
 import type { UsuarioRepository } from '../src/repositories/UsuarioRepository';
 
@@ -81,11 +82,22 @@ describe('AuthService', () => {
   });
 
   it('retorna a mesma falha para e-mail inexistente e senha incorreta', async () => {
+    const comparar = vi.spyOn(bcrypt, 'compare');
     const repositorio = criarRepositorio({ findByEmail: vi.fn().mockResolvedValue(null) });
     const servico = new AuthService(repositorio);
 
     await expect(servico.login({ email: 'ausente@example.com', senha: 'senha' }))
       .rejects.toMatchObject({ statusCode: 401, message: 'E-mail ou senha inválidos.' });
+    // O bcrypt roda mesmo sem usuário para não revelar, pelo tempo de resposta, quais e-mails existem.
+    expect(comparar).toHaveBeenCalledTimes(1);
+  });
+
+  it('recusa senhas acima de 72 bytes, limite real do bcrypt', () => {
+    const cadastro = { nome: 'Teste', email: 'teste@example.com' };
+
+    expect(registrarUsuarioSchema.safeParse({ ...cadastro, senha: 'a'.repeat(72) }).success).toBe(true);
+    expect(registrarUsuarioSchema.safeParse({ ...cadastro, senha: 'a'.repeat(73) }).success).toBe(false);
+    expect(registrarUsuarioSchema.safeParse({ ...cadastro, senha: 'ç'.repeat(37) }).success).toBe(false);
   });
 
   it('retorna os dados básicos do usuário autenticado', async () => {
