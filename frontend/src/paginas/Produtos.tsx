@@ -2,7 +2,12 @@ import { AlertTriangle, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Aviso, Carregando, classesBotao, classesBotaoSecundario, classesCampo, EstadoVazio, Modal } from '../componentes/Modal';
 import { api } from '../servicos/api';
+import { apenasAlterados, deCentavos, emCentavos } from '../servicos/utilitarios';
 import type { AtualizarProduto, CriarProduto, Fornecedor, Produto } from '../tipos';
+
+const MARGEM_MINIMA_PERCENTUAL = 20;
+// Mesma regra da API: venda >= custo × 1,20. Em centavos inteiros e arredondando para cima, não sobra erro de ponto flutuante.
+const vendaMinimaEmCentavos = (precoCusto: number) => Math.ceil((emCentavos(precoCusto) * (100 + MARGEM_MINIMA_PERCENTUAL)) / 100);
 
 const formularioVazio: CriarProduto = { sku: '', nome: '', precoCusto: 0, precoVenda: 0, estoqueAtual: 0, estoqueMinimo: 0, fornecedorId: 0 };
 
@@ -62,16 +67,30 @@ export function PaginaProdutos() {
   const salvar = async (evento: FormEvent) => {
     evento.preventDefault();
     definirErro('');
-    if (formulario.precoVenda <= formulario.precoCusto) {
-      definirErro('O preço de venda precisa ser maior que o preço de custo.');
+    // Igual à API: na edição a margem só é cobrada quando o preço de custo ou de venda foi alterado.
+    const precoMudou = !editando
+      || formulario.precoCusto !== editando.precoCusto
+      || formulario.precoVenda !== editando.precoVenda;
+
+    if (precoMudou && emCentavos(formulario.precoVenda) < vendaMinimaEmCentavos(formulario.precoCusto)) {
+      definirErro(`O preço de venda deve garantir margem mínima de ${MARGEM_MINIMA_PERCENTUAL}% sobre o custo (mínimo de ${formatarMoeda(deCentavos(vendaMinimaEmCentavos(formulario.precoCusto)))}).`);
       return;
     }
 
     definirSalvando(true);
     try {
       if (editando) {
-        const dados: AtualizarProduto = formulario;
-        await api.atualizarProduto(editando.id, dados);
+        const original: CriarProduto = {
+          sku: editando.sku,
+          nome: editando.nome,
+          precoCusto: editando.precoCusto,
+          precoVenda: editando.precoVenda,
+          estoqueAtual: editando.estoqueAtual,
+          estoqueMinimo: editando.estoqueMinimo,
+          fornecedorId: editando.fornecedorId,
+        };
+        const dados: AtualizarProduto = apenasAlterados(original, formulario);
+        if (Object.keys(dados).length > 0) await api.atualizarProduto(editando.id, dados);
       } else {
         await api.criarProduto(formulario);
       }
@@ -134,7 +153,7 @@ export function PaginaProdutos() {
           <Campo titulo="Estoque atual"><input className={classesCampo} type="number" min="0" step="1" required value={formulario.estoqueAtual} onChange={(evento) => definirFormulario({ ...formulario, estoqueAtual: Number(evento.target.value) })} /></Campo>
           <Campo titulo="Estoque mínimo"><input className={classesCampo} type="number" min="0" step="1" required value={formulario.estoqueMinimo} onChange={(evento) => definirFormulario({ ...formulario, estoqueMinimo: Number(evento.target.value) })} /></Campo>
           <Campo titulo="Fornecedor"><select className={classesCampo} required value={formulario.fornecedorId} onChange={(evento) => definirFormulario({ ...formulario, fornecedorId: Number(evento.target.value) })}><option value={0} disabled>Selecione</option>{fornecedores.filter((item) => item.ativo || item.id === editando?.fornecedorId).map((fornecedor) => <option key={fornecedor.id} value={fornecedor.id}>{fornecedor.nomeFantasia}</option>)}</select></Campo>
-          <p className="self-end pb-2 text-xs text-slate-500">O preço de venda deve superar o custo.</p>
+          <p className="self-end pb-2 text-xs text-slate-500">Venda mínima: {formatarMoeda(deCentavos(vendaMinimaEmCentavos(formulario.precoCusto)))} (margem de {MARGEM_MINIMA_PERCENTUAL}% sobre o custo).</p>
           <div className="flex justify-end gap-2 sm:col-span-2"><button type="button" className={classesBotaoSecundario} onClick={() => definirFormAberto(false)}>Cancelar</button><button className={classesBotao} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar produto'}</button></div>
         </form>
       </Modal>}

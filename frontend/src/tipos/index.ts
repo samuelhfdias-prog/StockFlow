@@ -89,9 +89,22 @@ export type PedidoCriado = {
   alertasReposicao: AlertaReposicao[];
 };
 
+export type PedidoCancelado = {
+  pedido: Pedido;
+  estorno: { creditoRestaurado: number; itensEstornados: number };
+};
+
 export type ErroApi = {
   message: string;
   errors?: Array<{ path: string; message: string }>;
+};
+
+export type SeveridadeAviso = 'erro' | 'alerta' | 'sucesso';
+
+export type AvisoTela = {
+  titulo?: string;
+  mensagem: string;
+  severidade: SeveridadeAviso;
 };
 
 export type CriarCliente = Pick<Cliente, 'razaoSocial' | 'cnpj' | 'email' | 'telefone' | 'limiteCredito'>;
