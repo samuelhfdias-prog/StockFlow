@@ -40,7 +40,7 @@ A API está organizada por responsabilidade:
 - `frontend/src/contextos/`: estado da sessão e usuário autenticado.
 - `frontend/src/paginas/` e `frontend/src/componentes/`: telas e elementos reutilizáveis.
 
-Controllers não acessam o Prisma. Para operações que precisam alterar várias tabelas de forma indivisível, `PedidoService` executa as leituras e gravações dentro de `prisma.$transaction`.
+Controllers não acessam o Prisma. Para operações que precisam alterar várias tabelas de forma indivisível, `PedidoService` abre a `prisma.$transaction` e repassa o cliente transacional (`tx`) ao `PedidoRepository`, que executa todas as leituras e gravações dentro da mesma transação.
 
 ## Pré-requisitos
 
@@ -69,6 +69,8 @@ PORT=3000
 HOST=127.0.0.1
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080
 JWT_SECRET="SEGREDO_ALEATORIO_COM_PELO_MENOS_32_BYTES"
+# Opcional: conexões simultâneas com o MySQL (padrão 10)
+DATABASE_POOL_LIMIT=10
 ```
 
 Gere um segredo JWT local aleatório:
@@ -84,7 +86,7 @@ O `.env` não é versionado. Nunca publique senhas ou segredos. Caracteres espec
 ```powershell
 npm install
 npm run prisma:generate
-npx prisma migrate dev --name init --config=prisma7.config.ts
+npm run db:push
 npm run dev
 ```
 
@@ -187,12 +189,13 @@ As rotas abaixo são protegidas por `Authorization: Bearer <JWT>`, salvo os endp
 | 10 | `GET /fornecedores/:id` | Consulta fornecedor e catálogo vinculado. |
 | 11 | `PUT /fornecedores/:id` | Atualiza contato, prazo e status. |
 | 12 | `DELETE /fornecedores/:id` | Exclui somente fornecedor sem produtos. |
-| 13 | `POST /produtos` | Cadastra produto com margem positiva e fornecedor ativo. |
+| 13 | `POST /produtos` | Cadastra produto com margem mínima de 20% sobre o custo e fornecedor ativo. |
 | 14 | `GET /produtos` | Lista produtos por fornecedor e estoque crítico. |
 | 15 | `GET /produtos/:id` | Consulta ficha, margem e sinalização de estoque. |
-| 16 | `PUT /produtos/:id` | Atualiza produto validando SKU e margem. |
+| 16 | `PUT /produtos/:id` | Atualiza produto validando SKU e, quando o preço muda, a margem mínima de 20%. |
 | 17 | `DELETE /produtos/:id` | Impede excluir produto presente no histórico de pedidos. |
 | 18 | `POST /pedidos` | Processa pedido, descontos, estoque, crédito e alertas. |
+| — | `GET /pedidos` | Lista pedidos com filtros `status` e `clienteId`. |
 | 19 | `GET /pedidos/:id` | Retorna espelho financeiro, cliente e itens. |
 | 20 | `PATCH /pedidos/:id/cancelar` | Cancela pedido aprovado e estorna estoque/crédito. |
 
@@ -213,6 +216,14 @@ Valores monetários são calculados com `Prisma.Decimal`; a API converte os obje
 ### Cancelamento de pedido
 
 `PATCH /pedidos/:id/cancelar` só permite pedidos `APROVADO`. Dentro de outra transação, muda o status condicionalmente para impedir estorno duplicado, devolve as quantidades ao estoque e recompõe o crédito pelo valor líquido faturado. Um erro em qualquer etapa desfaz status, estoque e crédito juntos.
+
+### Margem de lucro dos produtos
+
+O preço de venda precisa ser, no mínimo, 20% acima do preço de custo (`venda >= custo × 1,20`); caso contrário `POST /produtos` e `PUT /produtos/:id` respondem `422`. No `PUT` a margem só é reavaliada quando `precoCusto` ou `precoVenda` fazem parte da alteração. `GET /produtos/:id` devolve `margemLucroPercentual`, calculada sobre o custo com `Prisma.Decimal` e arredondamento `ROUND_HALF_UP` em duas casas.
+
+### Validações e erros
+
+Mensagens de validação do Zod saem em português com status `400`. Valores monetários aceitam no máximo duas casas decimais e `R$ 99.999.999,99`, textos até 191 caracteres e inteiros até 2.147.483.647, respeitando as colunas do MySQL. Corpos acima de 100 KB respondem `413` e rotas inexistentes respondem `404` em JSON.
 
 ## Segurança e limitações conhecidas
 

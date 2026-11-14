@@ -1,6 +1,6 @@
 import { Prisma } from '../src/generated/prisma/client';
 import { describe, expect, it, vi } from 'vitest';
-import { PedidoService } from '../src/services/PedidoService';
+import { calcularDesconto, PedidoService } from '../src/services/PedidoService';
 
 type PedidoTesteOpcoes = {
   clienteAtivo?: boolean;
@@ -143,11 +143,27 @@ describe('PedidoService', () => {
       findByIdWithClienteAndItens: vi.fn(),
       findAll: vi.fn().mockResolvedValue([{ id: 3 }]),
     };
-    const servico = new PedidoService(undefined, repositorio);
+    const servico = new PedidoService(undefined, repositorio as never);
 
     await expect(servico.listar({ status: 'APROVADO', clienteId: '4' })).resolves.toEqual([{ id: 3 }]);
     expect(repositorio.findAll).toHaveBeenCalledWith({ status: 'APROVADO', clienteId: 4 });
     await expect(servico.listar({ status: 'DESCONHECIDO' })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it.each([
+    { unidades: 9, bruto: '2500.00', taxa: '0', desconto: '0' },
+    { unidades: 9, bruto: '2500.01', taxa: '0.05', desconto: '125' },
+    { unidades: 10, bruto: '100.00', taxa: '0.05', desconto: '5' },
+    { unidades: 29, bruto: '7000.00', taxa: '0.05', desconto: '350' },
+    { unidades: 29, bruto: '7000.01', taxa: '0.1', desconto: '700' },
+    { unidades: 30, bruto: '100.00', taxa: '0.1', desconto: '10' },
+    { unidades: 10, bruto: '80.30', taxa: '0.05', desconto: '4.02' },
+  ])('calcula o desconto progressivo com $unidades unidades e bruto $bruto', ({ unidades, bruto, taxa, desconto }) => {
+    const resultado = calcularDesconto(unidades, new Prisma.Decimal(bruto));
+
+    expect(resultado.taxa.toString()).toBe(taxa);
+    expect(resultado.valorDesconto.toString()).toBe(desconto);
+    expect(resultado.valorLiquido.toString()).toBe(new Prisma.Decimal(bruto).minus(desconto).toString());
   });
 
   it('restaura estoque e crédito ao cancelar um pedido aprovado e bloqueia novo estorno', async () => {

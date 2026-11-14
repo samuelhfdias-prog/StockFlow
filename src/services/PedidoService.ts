@@ -13,17 +13,70 @@ type AlertaReposicao = {
   prazoEntrega: number;
 };
 
+// Pedidos com muitos itens precisam de mais tempo que os 5 segundos padrão do Prisma.
+const OPCOES_TRANSACAO = { maxWait: 5_000, timeout: 15_000 };
+const LIMITE_QUANTIDADE_PRODUTO = 2_147_483_647;
+
+export const calcularDesconto = (totalUnidades: number, valorBruto: Prisma.Decimal) => {
+  const taxa = totalUnidades >= 30 || valorBruto.greaterThan(7000)
+    ? new Prisma.Decimal('0.10')
+    : totalUnidades >= 10 || valorBruto.greaterThan(2500)
+      ? new Prisma.Decimal('0.05')
+      : new Prisma.Decimal(0);
+  const valorDesconto = valorBruto.mul(taxa).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+
+  return { taxa, valorDesconto, valorLiquido: valorBruto.minus(valorDesconto) };
+};
+
+const somarQuantidadesPorProduto = (itens: CriarPedidoInput['itens']) => {
+  const quantidadesPorProduto = new Map<number, number>();
+
+  for (const item of itens) {
+    const quantidadeTotal = (quantidadesPorProduto.get(item.produtoId) ?? 0) + item.quantidade;
+
+    if (quantidadeTotal > LIMITE_QUANTIDADE_PRODUTO) {
+      throw new AppError('A quantidade total de um produto excede o limite permitido.', 400);
+    }
+
+    quantidadesPorProduto.set(item.produtoId, quantidadeTotal);
+  }
+
+  return quantidadesPorProduto;
+};
+
+const lerIdDoPedido = (id: string) => {
+  const pedidoId = Number(id);
+
+  if (!Number.isSafeInteger(pedidoId) || pedidoId <= 0) {
+    throw new AppError('O ID do pedido deve ser um número inteiro positivo.', 400);
+  }
+
+  return pedidoId;
+};
+
 export class PedidoService {
   constructor(
     private readonly prismaClient: PrismaClient = prisma,
-    private readonly pedidoRepository: Pick<PedidoRepository, 'findByIdWithClienteAndItens' | 'findAll'> = new PedidoRepository(),
+    private readonly pedidoRepository: Pick<
+      PedidoRepository,
+      | 'findAll'
+      | 'findByIdWithClienteAndItens'
+      | 'buscarCliente'
+      | 'buscarProdutosComFornecedor'
+      | 'baixarEstoque'
+      | 'debitarCredito'
+      | 'criarAprovado'
+      | 'buscarParaCancelamento'
+      | 'marcarComoCancelado'
+      | 'devolverEstoque'
+      | 'devolverCredito'
+      | 'buscarComItens'
+    > = new PedidoRepository(),
   ) {}
 
   async criarPedido(dados: CriarPedidoInput) {
     return this.prismaClient.$transaction(async (tx) => {
-      const cliente = await tx.cliente.findUnique({
-        where: { id: dados.clienteId },
-      });
+      const cliente = await this.pedidoRepository.buscarCliente(tx, dados.clienteId);
 
       if (!cliente) {
         throw new AppError('Cliente não encontrado.', 404);
@@ -33,30 +86,9 @@ export class PedidoService {
         throw new AppError('Cliente inativo para operações comerciais', 403);
       }
 
-      const quantidadesPorProduto = new Map<number, number>();
-
-      for (const item of dados.itens) {
-        const quantidadeAtual = quantidadesPorProduto.get(item.produtoId) ?? 0;
-        const quantidadeTotal = quantidadeAtual + item.quantidade;
-
-        if (!Number.isSafeInteger(quantidadeTotal) || quantidadeTotal > 2_147_483_647) {
-          throw new AppError('A quantidade total de um produto excede o limite permitido.', 400);
-        }
-
-        quantidadesPorProduto.set(item.produtoId, quantidadeTotal);
-      }
-
-      const produtos = await tx.produto.findMany({
-        where: { id: { in: [...quantidadesPorProduto.keys()] } },
-        include: {
-          fornecedor: {
-            select: {
-              nomeFantasia: true,
-              prazoEntrega: true,
-            },
-          },
-        },
-      });
+      const quantidadesPorProduto = somarQuantidadesPorProduto(dados.itens);
+      const idsProdutos = [...quantidadesPorProduto.keys()].sort((idA, idB) => idA - idB);
+      const produtos = await this.pedidoRepository.buscarProdutosComFornecedor(tx, idsProdutos);
       const produtosPorId = new Map(produtos.map((produto) => [produto.id, produto]));
       const buscarProduto = (produtoId: number) => {
         const produto = produtosPorId.get(produtoId);
@@ -68,7 +100,7 @@ export class PedidoService {
         return produto;
       };
 
-      for (const produtoId of quantidadesPorProduto.keys()) {
+      for (const produtoId of idsProdutos) {
         buscarProduto(produtoId);
       }
 
@@ -80,121 +112,61 @@ export class PedidoService {
         }
       }
 
-      const totalUnidades = dados.itens.reduce((total, item) => total + BigInt(item.quantidade), 0n);
-      const valorBruto = dados.itens.reduce((total, item) => {
+      const itensPedido = dados.itens.map((item) => {
         const produto = buscarProduto(item.produtoId);
-        return total.add(new Prisma.Decimal(produto.precoVenda).mul(item.quantidade));
-      }, new Prisma.Decimal(0));
 
-      const taxaDesconto = totalUnidades >= 30n || valorBruto.greaterThan(7000)
-        ? new Prisma.Decimal('0.10')
-        : totalUnidades >= 10n || valorBruto.greaterThan(2500)
-          ? new Prisma.Decimal('0.05')
-          : new Prisma.Decimal(0);
-      const valorDesconto = valorBruto
-        .mul(taxaDesconto)
-        .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-      const valorLiquido = valorBruto.minus(valorDesconto);
+        return {
+          produtoId: produto.id,
+          quantidade: item.quantidade,
+          precoUnitario: produto.precoVenda,
+          subtotal: new Prisma.Decimal(produto.precoVenda).mul(item.quantidade),
+        };
+      });
+      const totalUnidades = [...quantidadesPorProduto.values()].reduce((total, quantidade) => total + quantidade, 0);
+      const valorBruto = itensPedido.reduce((total, item) => total.add(item.subtotal), new Prisma.Decimal(0));
+      const { valorDesconto, valorLiquido } = calcularDesconto(totalUnidades, valorBruto);
 
       if (valorLiquido.greaterThan(cliente.limiteCredito)) {
         throw new AppError('Crédito Insuficiente para aprovar o pedido', 422);
       }
 
+      // A ordem crescente de IDs evita deadlock entre pedidos concorrentes que disputam os mesmos produtos.
       for (const [produtoId, quantidade] of [...quantidadesPorProduto].sort(([idA], [idB]) => idA - idB)) {
-        const produto = buscarProduto(produtoId);
-        const baixa = await tx.produto.updateMany({
-          where: {
-            id: produtoId,
-            estoqueAtual: { gte: quantidade },
-          },
-          data: { estoqueAtual: { decrement: quantidade } },
-        });
+        const baixa = await this.pedidoRepository.baixarEstoque(tx, produtoId, quantidade);
 
         if (baixa.count !== 1) {
-          throw new AppError(`SKU ${produto.sku} não possui estoque suficiente.`, 422);
+          throw new AppError(`SKU ${buscarProduto(produtoId).sku} não possui estoque suficiente.`, 422);
         }
       }
 
-      const debitoCredito = await tx.cliente.updateMany({
-        where: {
-          id: cliente.id,
-          ativo: true,
-          limiteCredito: { gte: valorLiquido },
-        },
-        data: { limiteCredito: { decrement: valorLiquido } },
-      });
+      const debitoCredito = await this.pedidoRepository.debitarCredito(tx, cliente.id, valorLiquido);
 
       if (debitoCredito.count !== 1) {
         throw new AppError('Crédito Insuficiente para aprovar o pedido', 422);
       }
 
-      const pedido = await tx.pedido.create({
-        data: {
-          clienteId: cliente.id,
-          status: 'APROVADO',
-          valorBruto,
-          valorDesconto,
-          valorLiquido,
-          itensPedido: {
-            create: dados.itens.map((item) => {
-              const produto = buscarProduto(item.produtoId);
-              return {
-                produtoId: produto.id,
-                quantidade: item.quantidade,
-                precoUnitario: produto.precoVenda,
-                subtotal: new Prisma.Decimal(produto.precoVenda).mul(item.quantidade),
-              };
-            }),
-          },
-        },
-        select: {
-          id: true,
-          status: true,
-          criadoEm: true,
-          valorBruto: true,
-          valorDesconto: true,
-          valorLiquido: true,
-        },
+      const pedido = await this.pedidoRepository.criarAprovado(tx, {
+        clienteId: cliente.id,
+        valorBruto,
+        valorDesconto,
+        valorLiquido,
+        itens: itensPedido,
       });
 
-      const produtosAtualizados = await tx.produto.findMany({
-        where: { id: { in: [...quantidadesPorProduto.keys()] } },
-        include: {
-          fornecedor: {
-            select: {
-              nomeFantasia: true,
-              prazoEntrega: true,
-            },
-          },
-        },
-      });
-      const produtosAtualizadosPorId = new Map(produtosAtualizados.map((produto) => [produto.id, produto]));
-      const alertasReposicao: AlertaReposicao[] = [];
+      const produtosAtualizados = await this.pedidoRepository.buscarProdutosComFornecedor(tx, idsProdutos);
+      const alertasReposicao: AlertaReposicao[] = produtosAtualizados
+        .filter((produto) => produto.estoqueAtual <= produto.estoqueMinimo)
+        .map((produto) => ({
+          sku: produto.sku,
+          nome: produto.nome,
+          estoqueAtual: produto.estoqueAtual,
+          estoqueMinimo: produto.estoqueMinimo,
+          nomeFantasia: produto.fornecedor.nomeFantasia,
+          prazoEntrega: produto.fornecedor.prazoEntrega,
+        }));
 
-      for (const produtoId of quantidadesPorProduto.keys()) {
-        const produto = produtosAtualizadosPorId.get(produtoId);
-
-        if (!produto) {
-          throw new AppError(`Produto de ID ${produtoId} não encontrado.`, 404);
-        }
-
-        if (produto.estoqueAtual <= produto.estoqueMinimo) {
-          alertasReposicao.push({
-            sku: produto.sku,
-            nome: produto.nome,
-            estoqueAtual: produto.estoqueAtual,
-            estoqueMinimo: produto.estoqueMinimo,
-            nomeFantasia: produto.fornecedor.nomeFantasia,
-            prazoEntrega: produto.fornecedor.prazoEntrega,
-          });
-        }
-      }
-
-      return {
-        pedido,
-        alertasReposicao,
-      };
-    });
+      return { pedido, alertasReposicao };
+    }, OPCOES_TRANSACAO);
   }
 
   async listar(query: { status?: unknown; clienteId?: unknown }) {
@@ -208,13 +180,7 @@ export class PedidoService {
   }
 
   async buscarPorId(id: string) {
-    const pedidoId = Number(id);
-
-    if (!Number.isSafeInteger(pedidoId) || pedidoId <= 0) {
-      throw new AppError('O ID do pedido deve ser um número inteiro positivo.', 400);
-    }
-
-    const pedido = await this.pedidoRepository.findByIdWithClienteAndItens(pedidoId);
+    const pedido = await this.pedidoRepository.findByIdWithClienteAndItens(lerIdDoPedido(id));
 
     if (!pedido) {
       throw new AppError('Pedido não encontrado.', 404);
@@ -224,24 +190,10 @@ export class PedidoService {
   }
 
   async cancelarPedido(id: string) {
-    const pedidoId = Number(id);
-
-    if (!Number.isSafeInteger(pedidoId) || pedidoId <= 0) {
-      throw new AppError('O ID do pedido deve ser um número inteiro positivo.', 400);
-    }
+    const pedidoId = lerIdDoPedido(id);
 
     return this.prismaClient.$transaction(async (tx) => {
-      const pedido = await tx.pedido.findUnique({
-        where: { id: pedidoId },
-        include: {
-          itensPedido: {
-            select: {
-              produtoId: true,
-              quantidade: true,
-            },
-          },
-        },
-      });
+      const pedido = await this.pedidoRepository.buscarParaCancelamento(tx, pedidoId);
 
       if (!pedido) {
         throw new AppError('Pedido não encontrado.', 404);
@@ -251,10 +203,7 @@ export class PedidoService {
         throw new AppError('Somente pedidos aprovados podem ser cancelados.', 409);
       }
 
-      const cancelamento = await tx.pedido.updateMany({
-        where: { id: pedidoId, status: 'APROVADO' },
-        data: { status: 'CANCELADO' },
-      });
+      const cancelamento = await this.pedidoRepository.marcarComoCancelado(tx, pedidoId);
 
       if (cancelamento.count !== 1) {
         throw new AppError('Somente pedidos aprovados podem ser cancelados.', 409);
@@ -270,25 +219,16 @@ export class PedidoService {
       }
 
       for (const [produtoId, quantidade] of [...quantidadesPorProduto].sort(([idA], [idB]) => idA - idB)) {
-        const restock = await tx.produto.updateMany({
-          where: { id: produtoId },
-          data: { estoqueAtual: { increment: quantidade } },
-        });
+        const devolucao = await this.pedidoRepository.devolverEstoque(tx, produtoId, quantidade);
 
-        if (restock.count !== 1) {
+        if (devolucao.count !== 1) {
           throw new AppError('Produto do pedido não encontrado durante o estorno.', 404);
         }
       }
 
-      await tx.cliente.update({
-        where: { id: pedido.clienteId },
-        data: { limiteCredito: { increment: pedido.valorLiquido } },
-      });
+      await this.pedidoRepository.devolverCredito(tx, pedido.clienteId, pedido.valorLiquido);
 
-      const pedidoAtualizado = await tx.pedido.findUnique({
-        where: { id: pedidoId },
-        include: { itensPedido: true },
-      });
+      const pedidoAtualizado = await this.pedidoRepository.buscarComItens(tx, pedidoId);
 
       if (!pedidoAtualizado) {
         throw new AppError('Pedido não encontrado.', 404);
@@ -301,6 +241,6 @@ export class PedidoService {
           itensEstornados: pedido.itensPedido.length,
         },
       };
-    });
+    }, OPCOES_TRANSACAO);
   }
 }

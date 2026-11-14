@@ -856,7 +856,7 @@ export const swaggerDocument = {
       put: {
         tags: ['Produtos'],
         summary: 'Atualizar produto',
-        description: 'Atualiza os dados do item preservando SKU único e preço de venda superior ao custo. Requer um Bearer token válido.',
+        description: 'Atualiza os dados do item preservando SKU único e garantindo, quando o preço muda, margem mínima de 20% sobre o custo. Requer um Bearer token válido.',
         operationId: 'atualizarProduto',
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -928,7 +928,7 @@ export const swaggerDocument = {
             },
           },
           '422': {
-            description: 'A venda deve superar o custo; o fornecedor informado deve existir e estar ativo.',
+            description: 'O novo preço de venda deve manter margem mínima de 20% sobre o custo; o fornecedor informado deve existir e estar ativo.',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Erro' },

@@ -133,11 +133,14 @@ export class ProdutoService {
       throw new AppError('Produto não encontrado.', 404);
     }
 
-    const precoCusto = dados.precoCusto ?? Number(produtoAtual.precoCusto);
-    const precoVenda = dados.precoVenda ?? Number(produtoAtual.precoVenda);
+    // A margem só é reavaliada quando o preço muda, para que produtos antigos com margem menor ainda possam ter estoque e demais dados atualizados.
+    if (dados.precoCusto !== undefined || dados.precoVenda !== undefined) {
+      const precoCusto = dados.precoCusto ?? produtoAtual.precoCusto;
+      const precoVenda = dados.precoVenda ?? produtoAtual.precoVenda;
 
-    if (precoVenda <= precoCusto) {
-      throw new AppError('O preço de venda deve ser maior que o preço de custo.', 422);
+      if (!margemMinimaAtendida(precoCusto, precoVenda)) {
+        throw new AppError(MENSAGEM_MARGEM_MINIMA, 422);
+      }
     }
 
     if (dados.sku && dados.sku !== produtoAtual.sku) {

@@ -22,6 +22,33 @@ describe('Rotas protegidas', () => {
     expect(resposta.status).toBe(401);
   });
 
+  it('responde 404 em JSON para rotas inexistentes', async () => {
+    const resposta = await request(app).get('/rota-inexistente');
+
+    expect(resposta.status).toBe(404);
+    expect(resposta.body).toEqual({ message: 'Rota não encontrada.' });
+  });
+
+  it('responde 413 quando o corpo ultrapassa o limite de 100 KB', async () => {
+    const resposta = await request(app)
+      .post('/auth/login')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ email: 'a@example.com', senha: 'x'.repeat(120_000) }));
+
+    expect(resposta.status).toBe(413);
+    expect(resposta.body).toEqual({ message: 'O corpo da requisição excede o tamanho permitido.' });
+  });
+
+  it('devolve mensagens de validação em português com status 400', async () => {
+    const resposta = await request(app)
+      .post('/auth/login')
+      .send({ email: 'sem-arroba', senha: 123, extra: true });
+
+    expect(resposta.status).toBe(400);
+    expect(resposta.body.message).toBe('Dados inválidos.');
+    expect(JSON.stringify(resposta.body.errors)).not.toMatch(/Invalid input|Unrecognized key/);
+  });
+
   it('aceita preflight CORS das portas de desenvolvimento e container', async () => {
     const origins = [
       'http://localhost:5173',

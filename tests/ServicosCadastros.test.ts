@@ -173,4 +173,32 @@ describe('Services de cadastros', () => {
     })).rejects.toMatchObject({ statusCode: 422, message: MENSAGEM_MARGEM_MINIMA });
     expect(produtos.findBySku).not.toHaveBeenCalled();
   });
+
+  it('PUT /produtos/:id reavalia a margem mínima só quando o preço muda', async () => {
+    const produtoAtual = {
+      id: 1, sku: 'SKU-1', fornecedorId: 3, precoCusto: new Prisma.Decimal('100'), precoVenda: new Prisma.Decimal('125'),
+    };
+    const criarServico = (atual: typeof produtoAtual) => {
+      const produtos = criarRepositorioProduto({
+        findById: vi.fn().mockResolvedValue(atual),
+        update: vi.fn().mockResolvedValue({ id: 1 }),
+      });
+      return { produtos, servico: new ProdutoService(produtos, criarRepositorioFornecedor()) };
+    };
+
+    const abaixo = criarServico(produtoAtual);
+    await expect(abaixo.servico.atualizar('1', { precoVenda: 119.99 }))
+      .rejects.toMatchObject({ statusCode: 422, message: MENSAGEM_MARGEM_MINIMA });
+    await expect(abaixo.servico.atualizar('1', { precoCusto: 105 }))
+      .rejects.toMatchObject({ statusCode: 422 });
+    expect(abaixo.produtos.update).not.toHaveBeenCalled();
+
+    const acima = criarServico(produtoAtual);
+    await acima.servico.atualizar('1', { precoVenda: 120 });
+    expect(acima.produtos.update).toHaveBeenCalledWith(1, { precoVenda: 120 });
+
+    const legado = criarServico({ ...produtoAtual, precoVenda: new Prisma.Decimal('105') });
+    await legado.servico.atualizar('1', { estoqueAtual: 40 });
+    expect(legado.produtos.update).toHaveBeenCalledWith(1, { estoqueAtual: 40 });
+  });
 });
