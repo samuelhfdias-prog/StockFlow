@@ -709,7 +709,7 @@ export const swaggerDocument = {
       post: {
         tags: ['Produtos'],
         summary: 'Cadastrar produto',
-        description: 'Cadastra um produto com preço de venda superior ao custo e vinculado a um fornecedor ativo. Requer um Bearer token válido.',
+        description: 'Cadastra um produto com preço de venda de, no mínimo, 20% acima do custo e vinculado a um fornecedor ativo. Requer um Bearer token válido.',
         operationId: 'criarProduto',
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -768,7 +768,7 @@ export const swaggerDocument = {
             },
           },
           '422': {
-            description: 'Margem inválida ou fornecedor inexistente/inativo.',
+            description: 'Margem de lucro abaixo do mínimo de 20% sobre o custo ou fornecedor inexistente/inativo.',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Erro' },

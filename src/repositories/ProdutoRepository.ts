@@ -1,6 +1,6 @@
 import { prisma } from '../database/prisma';
 import type { Produto, Prisma } from '../generated/prisma/client';
-import type { AtualizarProdutoInput, CriarProdutoInput } from '../schemas/produto.schema';
+import type { AtualizarProdutoInput, CriarProdutoInput, ListarProdutosFiltros } from '../schemas/produto.schema';
 
 type NovoProduto = Pick<
   CriarProdutoInput,
@@ -35,11 +35,16 @@ export class ProdutoRepository {
     return prisma.produto.delete({ where: { id } });
   }
 
-  findAll(fornecedorId?: number) {
+  findAll(filtros: ListarProdutosFiltros = {}) {
     const where: Prisma.ProdutoWhereInput = {};
 
-    if (fornecedorId !== undefined) {
-      where.fornecedorId = fornecedorId;
+    if (filtros.fornecedorId !== undefined) {
+      where.fornecedorId = filtros.fornecedorId;
+    }
+
+    if (filtros.estoqueCritico === true) {
+      // Compara as duas colunas direto no MySQL: estoqueAtual <= estoqueMinimo.
+      where.estoqueAtual = { lte: prisma.produto.fields.estoqueMinimo };
     }
 
     return prisma.produto.findMany({

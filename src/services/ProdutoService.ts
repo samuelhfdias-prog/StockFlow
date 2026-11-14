@@ -8,6 +8,29 @@ import {
   type CriarProdutoInput,
 } from '../schemas/produto.schema';
 
+// Margem sobre o custo, calculada com Decimal para não perder centavos em valores como 1,005%.
+export const calcularMargemLucroPercentual = (
+  precoCusto: Prisma.Decimal | string | number,
+  precoVenda: Prisma.Decimal | string | number,
+): number => new Prisma.Decimal(precoVenda)
+  .minus(precoCusto)
+  .div(precoCusto)
+  .mul(100)
+  .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)
+  .toNumber();
+
+export const MARGEM_MINIMA_PERCENTUAL = 20;
+
+export const MENSAGEM_MARGEM_MINIMA = `O preço de venda deve garantir uma margem de lucro mínima de ${MARGEM_MINIMA_PERCENTUAL}% sobre o preço de custo.`;
+
+// A venda precisa ser pelo menos o custo acrescido da margem mínima; a comparação em Decimal evita erro de centavos.
+export const margemMinimaAtendida = (
+  precoCusto: Prisma.Decimal | string | number,
+  precoVenda: Prisma.Decimal | string | number,
+): boolean => new Prisma.Decimal(precoVenda).greaterThanOrEqualTo(
+  new Prisma.Decimal(precoCusto).mul(100 + MARGEM_MINIMA_PERCENTUAL).div(100),
+);
+
 export class ProdutoService {
   constructor(
     private readonly produtoRepository: Pick<
@@ -25,8 +48,8 @@ export class ProdutoService {
   ) {}
 
   async criar(input: CriarProdutoInput) {
-    if (input.precoVenda <= input.precoCusto) {
-      throw new AppError('O preço de venda deve ser maior que o preço de custo.', 422);
+    if (!margemMinimaAtendida(input.precoCusto, input.precoVenda)) {
+      throw new AppError(MENSAGEM_MARGEM_MINIMA, 422);
     }
 
     const produtoExistente = await this.produtoRepository.findBySku(input.sku);
@@ -69,17 +92,12 @@ export class ProdutoService {
       throw new AppError('Filtros de consulta inválidos.', 400);
     }
 
-    const produtos = await this.produtoRepository.findAll(resultado.data.fornecedorId);
-    const comEstoqueCritico = produtos.map((produto) => ({
+    const produtos = await this.produtoRepository.findAll(resultado.data);
+
+    return produtos.map((produto) => ({
       ...produto,
       estoqueCritico: produto.estoqueAtual <= produto.estoqueMinimo,
     }));
-
-    if (resultado.data.estoqueCritico === true) {
-      return comEstoqueCritico.filter((produto) => produto.estoqueCritico);
-    }
-
-    return comEstoqueCritico;
   }
 
   async buscarPorId(id: string) {
@@ -95,18 +113,9 @@ export class ProdutoService {
       throw new AppError('Produto não encontrado.', 404);
     }
 
-    const precoCusto = Number(produto.precoCusto);
-    const precoVenda = Number(produto.precoVenda);
-
-    if (!Number.isFinite(precoCusto) || precoCusto <= 0 || !Number.isFinite(precoVenda)) {
-      throw new AppError('Não foi possível calcular a margem de lucro para este produto.', 422);
-    }
-
-    const margemLucroPercentual = Number((((precoVenda - precoCusto) / precoCusto) * 100).toFixed(2));
-
     return {
       ...produto,
-      margemLucroPercentual,
+      margemLucroPercentual: calcularMargemLucroPercentual(produto.precoCusto, produto.precoVenda),
       estoqueCritico: produto.estoqueAtual <= produto.estoqueMinimo,
     };
   }
