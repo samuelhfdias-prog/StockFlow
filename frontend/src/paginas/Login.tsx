@@ -1,34 +1,39 @@
 import { Boxes, LockKeyhole, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAutenticacao } from '../contextos/AutenticacaoContexto';
 import { Aviso, classesBotao, classesCampo } from '../componentes/Modal';
+import { useAviso } from '../componentes/useAviso';
+import type { AvisoTela } from '../tipos';
 
 export function PaginaLogin() {
   const { usuario, entrar } = useAutenticacao();
-  const navegar = useNavigate();
   const localizacao = useLocation();
-  const destino = (localizacao.state as { de?: string } | null)?.de || '/';
+  const estado = localizacao.state as { de?: string; aviso?: AvisoTela } | null;
+  const destino = estado?.de || '/';
   const [email, definirEmail] = useState('');
   const [senha, definirSenha] = useState('');
-  const [erro, definirErro] = useState('');
+  const [avisoInicial, definirAvisoInicial] = useState(estado?.aviso ?? null);
+  const { aviso, mostrarErro, limpar } = useAviso();
   const [enviando, definirEnviando] = useState(false);
 
-  if (usuario) return <Navigate to="/" replace />;
+  // Depois do login o contexto preenche `usuario`; o redirecionamento acontece aqui, já com o destino original.
+  if (usuario) return <Navigate to={destino} replace />;
 
   const enviar = async (evento: FormEvent) => {
     evento.preventDefault();
-    definirErro('');
+    limpar();
+    definirAvisoInicial(null);
     definirEnviando(true);
     try {
       await entrar(email, senha);
-      navegar(destino, { replace: true });
     } catch (falha) {
-      definirErro(falha instanceof Error ? falha.message : 'Não foi possível entrar.');
-    } finally {
+      mostrarErro(falha, 'Não foi possível entrar.');
       definirEnviando(false);
     }
   };
+
+  const avisoAtual = aviso ?? avisoInicial;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-marca-900 via-blue-900 to-slate-900 p-4">
@@ -37,7 +42,7 @@ export function PaginaLogin() {
           <div className="rounded-xl bg-blue-600 p-3 text-white"><Boxes /></div>
           <div><h1 className="text-2xl font-bold text-slate-900">StockFlow</h1><p className="text-sm text-slate-500">Acesse a gestão B2B</p></div>
         </div>
-        {erro && <Aviso mensagem={erro} fechar={() => definirErro('')} />}
+        {avisoAtual && <Aviso {...avisoAtual} fechar={() => { limpar(); definirAvisoInicial(null); }} />}
         <form onSubmit={enviar} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">E-mail
             <span className="relative mt-1 block"><Mail className="absolute left-3 top-2.5 text-slate-400" size={18} /><input className={`${classesCampo} pl-10`} type="email" autoComplete="email" required value={email} onChange={(evento) => definirEmail(evento.target.value)} /></span>

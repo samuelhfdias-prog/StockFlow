@@ -21,7 +21,10 @@ export function PaginaCadastro() {
     definirEnviando(true);
     try {
       await cadastrar(nome, email, senha);
-      navegar('/login', { replace: true, state: { aviso: 'Operador cadastrado. Faça login para continuar.' } });
+      navegar('/login', {
+        replace: true,
+        state: { aviso: { mensagem: 'Operador cadastrado. Faça login para continuar.', severidade: 'sucesso' } },
+      });
     } catch (falha) {
       definirErro(falha instanceof Error ? falha.message : 'Não foi possível concluir o cadastro.');
     } finally {

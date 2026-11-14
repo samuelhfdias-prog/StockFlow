@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
+import type { SeveridadeAviso } from '../tipos';
 
 export function Modal({ titulo, fechar, children, largo = false }: {
   titulo: string;
@@ -32,10 +33,24 @@ export function Carregando({ mensagem = 'Carregando...' }: { mensagem?: string }
   return <div className="py-12 text-center text-sm text-slate-500">{mensagem}</div>;
 }
 
-export function Aviso({ mensagem, fechar }: { mensagem: string; fechar: () => void }) {
+const estilosAviso: Record<SeveridadeAviso, string> = {
+  erro: 'border-rose-200 bg-rose-50 text-rose-800',
+  alerta: 'border-amber-200 bg-amber-50 text-amber-900',
+  sucesso: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+};
+
+export function Aviso({ mensagem, fechar, titulo, severidade = 'erro' }: {
+  mensagem: string;
+  fechar: () => void;
+  titulo?: string;
+  severidade?: SeveridadeAviso;
+}) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
-      <span>{mensagem}</span>
+    <div className={`mb-4 flex items-start justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${estilosAviso[severidade]}`} role={severidade === 'sucesso' ? 'status' : 'alert'}>
+      <div>
+        {titulo && <p className="font-bold">{titulo}</p>}
+        <p>{mensagem}</p>
+      </div>
       <button onClick={fechar} className="font-semibold">Fechar</button>
     </div>
   );
