@@ -1,4 +1,16 @@
 import { z } from 'zod';
+import { LIMITE_INTEIRO, textoObrigatorioSchema } from './comum.schema';
+
+const emailContatoSchema = z.string()
+  .trim()
+  .max(191, 'Use no máximo 191 caracteres.')
+  .pipe(z.email())
+  .transform((email) => email.toLowerCase());
+
+const prazoEntregaSchema = z.number()
+  .int()
+  .positive('O prazo de entrega deve ser um inteiro positivo em dias.')
+  .max(LIMITE_INTEIRO, 'O prazo de entrega excede o limite permitido.');
 
 const cnpjSchema = z.string()
   .trim()
@@ -6,18 +18,18 @@ const cnpjSchema = z.string()
   .transform((cnpj) => cnpj.replace(/\D/g, ''));
 
 export const criarFornecedorSchema = z.object({
-  nomeFantasia: z.string().trim().min(1, 'O nome fantasia é obrigatório.'),
+  nomeFantasia: textoObrigatorioSchema('O nome fantasia é obrigatório.'),
   cnpj: cnpjSchema,
-  emailContato: z.string().trim().pipe(z.email()).transform((email) => email.toLowerCase()),
-  prazoEntrega: z.number().int().positive('O prazo de entrega deve ser um inteiro positivo em dias.'),
+  emailContato: emailContatoSchema,
+  prazoEntrega: prazoEntregaSchema,
 }).strict();
 
 export type CriarFornecedorInput = z.infer<typeof criarFornecedorSchema>;
 
 export const atualizarFornecedorSchema = z.object({
-  nomeFantasia: z.string().trim().min(1, 'O nome fantasia é obrigatório.').optional(),
-  emailContato: z.string().trim().pipe(z.email()).transform((email) => email.toLowerCase()).optional(),
-  prazoEntrega: z.number().int().positive('O prazo de entrega deve ser um inteiro positivo em dias.').optional(),
+  nomeFantasia: textoObrigatorioSchema('O nome fantasia é obrigatório.').optional(),
+  emailContato: emailContatoSchema.optional(),
+  prazoEntrega: prazoEntregaSchema.optional(),
   ativo: z.boolean().optional(),
 }).strict().refine(
   (dados) => Object.values(dados).some((valor) => valor !== undefined),

@@ -55,7 +55,12 @@ export class FornecedorRepository {
   findByIdWithProdutos(id: number) {
     return prisma.fornecedor.findUnique({
       where: { id },
-      include: { produtos: true },
+      include: {
+        produtos: true,
+        _count: {
+          select: { produtos: true },
+        },
+      },
     });
   }
 }
