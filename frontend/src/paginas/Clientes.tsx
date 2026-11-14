@@ -1,7 +1,8 @@
 import { Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Aviso, Carregando, classesBotao, classesBotaoSecundario, classesCampo, EstadoVazio, Modal } from '../componentes/Modal';
-import { api } from '../servicos/api';
+import { api, ErroHttp } from '../servicos/api';
+import { apenasAlterados } from '../servicos/utilitarios';
 import type { AtualizarCliente, Cliente, CriarCliente } from '../tipos';
 
 const formularioVazio: CriarCliente = { razaoSocial: '', cnpj: '', email: '', telefone: '', limiteCredito: 0 };
@@ -58,8 +59,24 @@ export function PaginaClientes() {
     evento.preventDefault();
     definirSalvando(true);
     try {
-      if (editando) await api.atualizarCliente(editando.id, formulario as AtualizarCliente);
-      else await api.criarCliente(formulario);
+      if (editando) {
+        const original: typeof formulario = {
+          razaoSocial: editando.razaoSocial,
+          cnpj: editando.cnpj,
+          email: editando.email,
+          telefone: editando.telefone,
+          limiteCredito: editando.limiteCredito,
+          ativo: editando.ativo,
+        };
+        const dados: AtualizarCliente = apenasAlterados(original, formulario);
+        if (Object.keys(dados).length > 0) await api.atualizarCliente(editando.id, dados);
+      } else await api.criarCliente({
+        razaoSocial: formulario.razaoSocial,
+        cnpj: formulario.cnpj,
+        email: formulario.email,
+        telefone: formulario.telefone,
+        limiteCredito: formulario.limiteCredito,
+      });
       definirFormAberto(false);
       await carregar();
     } catch (falha) {
@@ -76,7 +93,7 @@ export function PaginaClientes() {
       await carregar();
     } catch (falha) {
       const mensagem = falha instanceof Error ? falha.message : 'Não foi possível excluir o cliente.';
-      definirErro(mensagem.includes('histórico') || mensagem.includes('pedidos')
+      definirErro(falha instanceof ErroHttp && falha.status === 409
         ? `${mensagem} Edite o cadastro e inative o cliente para preservar o histórico.`
         : mensagem);
     }
